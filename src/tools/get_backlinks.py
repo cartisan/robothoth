@@ -3,7 +3,17 @@ from pathlib import Path
 
 
 def get_backlinks(vault_path: str, notepath: str) -> list[str]:
-    """Return vault-relative paths of Markdown notes linking to a note."""
+    """Return sorted Markdown paths that link to the requested note.
+
+    Wikilinks, aliases, heading links, and embedded-note links are resolved
+    against the vault. Bare note names must identify a unique note; invalid,
+    missing, ambiguous, and non-Markdown targets are ignored.
+
+    Raises:
+        FileNotFoundError: If the requested note does not exist.
+        ValueError: If ``notepath`` is not a vault-relative Markdown path or
+            resolves outside the vault.
+    """
     relative_path = Path(notepath)
     if (
         not notepath

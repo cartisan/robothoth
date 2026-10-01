@@ -9,6 +9,7 @@ EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
 
 
 def test_lists_all_vault_notes_as_sorted_relative_markdown_paths() -> None:
+    """List every Markdown note as a sorted path relative to the vault."""
     notes = list_notes(VAULT)
 
     assert len(notes) == 14
@@ -20,6 +21,7 @@ def test_lists_all_vault_notes_as_sorted_relative_markdown_paths() -> None:
 
 
 def test_filters_to_nested_directory_recursively() -> None:
+    """Limit recursive listing to a requested nested directory."""
     notes = list_notes(VAULT, "ai engineering/2 areas/ai engineering")
 
     assert len(notes) == 12
@@ -35,6 +37,7 @@ def test_filters_to_nested_directory_recursively() -> None:
 
 
 def test_empty_directory_and_non_markdown_files(tmp_path: Path) -> None:
+    """Return no entries for empty directories and ignore non-Markdown files."""
     (tmp_path / "empty").mkdir()
     (tmp_path / "draft.txt").write_text("not a note")
     (tmp_path / "note.md").write_text("a note")
@@ -44,6 +47,7 @@ def test_empty_directory_and_non_markdown_files(tmp_path: Path) -> None:
 
 
 def test_missing_vault_or_directory_raises_file_not_found(tmp_path: Path) -> None:
+    """Raise FileNotFoundError when the vault or requested directory is absent."""
     with pytest.raises(FileNotFoundError):
         list_notes(str(tmp_path / "absent"))
     with pytest.raises(FileNotFoundError):
@@ -52,5 +56,6 @@ def test_missing_vault_or_directory_raises_file_not_found(tmp_path: Path) -> Non
 
 @pytest.mark.parametrize("path", ["../outside", "/tmp", "nested/../../outside"])
 def test_rejects_paths_outside_vault(tmp_path: Path, path: str) -> None:
+    """Reject absolute and parent paths that could escape the vault."""
     with pytest.raises(ValueError):
         list_notes(str(tmp_path), path)

@@ -3,7 +3,16 @@ from pathlib import Path
 
 
 def search_notes(vault_path: str, query: str) -> list[str]:
-    """Find vault-relative Markdown note paths whose content matches a regex."""
+    """Return sorted Markdown paths whose UTF-8 content matches ``query``.
+
+    ``query`` is compiled as a case-insensitive Python regular expression and
+    each matching note is returned once, relative to the vault root.
+
+    Raises:
+        FileNotFoundError: If ``vault_path`` is not a directory.
+        ValueError: If ``query`` is empty or is not a valid regular expression.
+        UnicodeDecodeError: If a matching candidate cannot be decoded as UTF-8.
+    """
     if not query:
         raise ValueError("Search query must not be empty")
 

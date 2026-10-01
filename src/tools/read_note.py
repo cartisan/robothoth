@@ -2,6 +2,17 @@ from pathlib import Path
 
 
 def read_note(vault_path: str, notepath: str) -> str:
+    """Read a UTF-8 Markdown note addressed by its vault-relative path.
+
+    Symlinks and path components that resolve outside the vault are rejected,
+    so callers can use the result without granting access to other files.
+
+    Raises:
+        FileNotFoundError: If the requested note does not exist.
+        ValueError: If ``notepath`` is not a relative Markdown path inside the
+            vault.
+        UnicodeDecodeError: If the note is not valid UTF-8.
+    """
     relative_path = Path(notepath)
     if (
         not notepath

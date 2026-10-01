@@ -8,6 +8,7 @@ import src.tools.dispatch as dispatch
 
 @pytest.fixture
 def vault(tmp_path: Path) -> str:
+    """Create a small vault covering nested notes and a wikilink."""
     folder = tmp_path / "folder"
     folder.mkdir()
     (folder / "Alpha.md").write_text("Python [[Beta]]", encoding="utf-8")
@@ -29,6 +30,7 @@ def vault(tmp_path: Path) -> str:
 def test_dispatches_each_tool(
     vault: str, name: str, arguments: dict[str, str], expected: str | list[str]
 ) -> None:
+    """Dispatch each supported tool and return its successful JSON result."""
     output = dispatch.dispatch_tool_call(name, json.dumps(arguments), vault)
 
     assert json.loads(output) == {"ok": True, "result": expected}
@@ -50,6 +52,7 @@ def test_dispatches_each_tool(
 def test_rejects_bad_model_arguments(
     vault: str, name: str, arguments_json: str
 ) -> None:
+    """Reject malformed, incomplete, mistyped, and unexpected arguments."""
     output = json.loads(dispatch.dispatch_tool_call(name, arguments_json, vault))
 
     assert output["ok"] is False
@@ -57,6 +60,7 @@ def test_rejects_bad_model_arguments(
 
 
 def test_rejects_unknown_tool(vault: str) -> None:
+    """Return an unknown_tool error for an unsupported tool name."""
     output = json.loads(dispatch.dispatch_tool_call("delete_note", "{}", vault))
 
     assert output["error"]["code"] == "unknown_tool"
@@ -73,6 +77,7 @@ def test_rejects_unknown_tool(vault: str) -> None:
 def test_translates_expected_tool_errors(
     vault: str, name: str, arguments_json: str, code: str
 ) -> None:
+    """Translate expected tool failures into stable public error codes."""
     output = json.loads(dispatch.dispatch_tool_call(name, arguments_json, vault))
 
     assert output["ok"] is False
@@ -83,6 +88,7 @@ def test_translates_expected_tool_errors(
 def test_translates_io_error_without_exposing_path(
     vault: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Hide filesystem error details while preserving the public I/O code."""
     def fail_read(_vault_path: str, _notepath: str) -> str:
         raise PermissionError("private path")
 
@@ -98,6 +104,7 @@ def test_translates_io_error_without_exposing_path(
 
 
 def test_invalid_note_encoding_is_an_io_error(tmp_path: Path) -> None:
+    """Translate invalid note encoding into a public I/O error."""
     (tmp_path / "broken.md").write_bytes(b"\xff")
 
     output = json.loads(
@@ -112,6 +119,7 @@ def test_invalid_note_encoding_is_an_io_error(tmp_path: Path) -> None:
 def test_translates_unexpected_error_without_exposing_details(
     vault: str, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Hide unexpected exception details from callers while logging them."""
     def fail_read(_vault_path: str, _notepath: str) -> str:
         raise RuntimeError("private detail")
 

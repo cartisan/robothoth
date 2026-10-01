@@ -21,11 +21,18 @@ _ARGUMENTS: dict[str, tuple[set[str], set[str]]] = {
 
 
 def _error(code: str, message: str) -> str:
+    """Serialize a failed tool call using the dispatcher's error envelope."""
     return json.dumps({"ok": False, "error": {"code": code, "message": message}})
 
 
 def dispatch_tool_call(name: str, arguments_json: str, vault_path: str) -> str:
-    """Run a named vault tool with model arguments and return a JSON result string."""
+    """Run a named vault tool and return its JSON success or error envelope.
+
+    The model-provided arguments must be a JSON object matching the selected
+    tool's schema. Expected validation, filesystem, decoding, and unexpected
+    failures are converted into stable error codes; implementation details are
+    logged rather than exposed in the returned message.
+    """
     if name not in _ARGUMENTS:
         return _error("unknown_tool", f"Unknown tool: {name}")
 

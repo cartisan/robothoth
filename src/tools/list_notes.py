@@ -2,7 +2,16 @@ from pathlib import Path
 
 
 def list_notes(vault_path: str, path: str | None = None) -> list[str]:
-    """List Markdown note paths relative to a vault, optionally within a directory."""
+    """Return sorted vault-relative Markdown paths under an optional directory.
+
+    The directory is interpreted relative to ``vault_path`` and searched
+    recursively. Only regular Markdown files inside the vault are returned.
+
+    Raises:
+        FileNotFoundError: If the vault or requested directory does not exist.
+        ValueError: If ``path`` is absolute, escapes the vault, or is not a
+            directory inside the vault.
+    """
     vault = Path(vault_path).resolve()
     if not vault.is_dir():
         raise FileNotFoundError(vault_path)
