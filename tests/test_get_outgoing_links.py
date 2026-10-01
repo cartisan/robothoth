@@ -4,7 +4,7 @@ import pytest
 
 from src.tools.get_outgoing_links import get_outgoing_links
 
-VAULT = Path(__file__).parent / "test_vault"
+VAULT = str(Path(__file__).parent / "test_vault")
 EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
 
 
@@ -41,7 +41,7 @@ def test_resolves_path_qualified_and_unique_bare_targets(tmp_path: Path) -> None
         encoding="utf-8",
     )
 
-    assert get_outgoing_links(tmp_path, "source.md") == [
+    assert get_outgoing_links(str(tmp_path), "source.md") == [
         "area/First.md",
         "other/Second.md",
     ]
@@ -59,7 +59,7 @@ def test_omits_missing_ambiguous_and_attachment_targets(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    assert get_outgoing_links(tmp_path, "source.md") == [
+    assert get_outgoing_links(str(tmp_path), "source.md") == [
         "one/Duplicate.md",
         "one/Unique.md",
     ]
@@ -68,12 +68,12 @@ def test_omits_missing_ambiguous_and_attachment_targets(tmp_path: Path) -> None:
 def test_note_with_no_links_returns_empty_list(tmp_path: Path) -> None:
     (tmp_path / "plain.md").write_text("No wikilinks here.", encoding="utf-8")
 
-    assert get_outgoing_links(tmp_path, "plain.md") == []
+    assert get_outgoing_links(str(tmp_path), "plain.md") == []
 
 
 def test_missing_source_raises_file_not_found(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        get_outgoing_links(tmp_path, "missing.md")
+        get_outgoing_links(str(tmp_path), "missing.md")
 
 
 @pytest.mark.parametrize(
@@ -81,7 +81,7 @@ def test_missing_source_raises_file_not_found(tmp_path: Path) -> None:
 )
 def test_rejects_invalid_source_path(tmp_path: Path, notepath: str) -> None:
     with pytest.raises(ValueError):
-        get_outgoing_links(tmp_path, notepath)
+        get_outgoing_links(str(tmp_path), notepath)
 
 
 def test_rejects_source_symlink_escape(tmp_path: Path) -> None:
@@ -92,4 +92,4 @@ def test_rejects_source_symlink_escape(tmp_path: Path) -> None:
     (vault / "link.md").symlink_to(outside)
 
     with pytest.raises(ValueError):
-        get_outgoing_links(vault, "link.md")
+        get_outgoing_links(str(vault), "link.md")

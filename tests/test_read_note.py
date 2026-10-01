@@ -4,7 +4,7 @@ import pytest
 
 from src.tools.read_note import read_note
 
-VAULT = Path(__file__).parent / "test_vault"
+VAULT = str(Path(__file__).parent / "test_vault")
 NESTED_NOTE = (
     "ai engineering/2 areas/ai engineering/evaluation/AI Evaluation Metrics.md"
 )
@@ -15,7 +15,9 @@ NESTED_NOTE = (
     ["ai engineering/Index.md", NESTED_NOTE],
 )
 def test_read_note_returns_full_utf8_content(notepath: str) -> None:
-    assert read_note(VAULT, notepath) == (VAULT / notepath).read_text(encoding="utf-8")
+    assert read_note(VAULT, notepath) == (Path(VAULT) / notepath).read_text(
+        encoding="utf-8"
+    )
 
 
 def test_read_note_raises_for_missing_note() -> None:
@@ -27,7 +29,7 @@ def test_read_note_rejects_non_markdown_file(tmp_path: Path) -> None:
     (tmp_path / "private.txt").write_text("secret", encoding="utf-8")
 
     with pytest.raises(ValueError):
-        read_note(tmp_path, "private.txt")
+        read_note(str(tmp_path), "private.txt")
 
 
 @pytest.mark.parametrize("notepath", ["", "../outside.md", "/tmp/outside.md"])
@@ -35,7 +37,7 @@ def test_read_note_rejects_invalid_or_escaping_path(
     tmp_path: Path, notepath: str
 ) -> None:
     with pytest.raises(ValueError):
-        read_note(tmp_path, notepath)
+        read_note(str(tmp_path), notepath)
 
 
 def test_read_note_rejects_symlink_escape(tmp_path: Path) -> None:
@@ -46,4 +48,4 @@ def test_read_note_rejects_symlink_escape(tmp_path: Path) -> None:
     (vault / "linked.md").symlink_to(outside)
 
     with pytest.raises(ValueError):
-        read_note(vault, "linked.md")
+        read_note(str(vault), "linked.md")

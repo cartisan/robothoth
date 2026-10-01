@@ -1,9 +1,9 @@
 from pathlib import Path
 
 
-def list_notes(vault_path: Path, path: str | None = None) -> list[str]:
+def list_notes(vault_path: str, path: str | None = None) -> list[str]:
     """List Markdown note paths relative to a vault, optionally within a directory."""
-    vault = vault_path.resolve()
+    vault = Path(vault_path).resolve()
     if not vault.is_dir():
         raise FileNotFoundError(vault_path)
 

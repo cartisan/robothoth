@@ -4,7 +4,7 @@ import pytest
 
 from src.tools.list_notes import list_notes
 
-VAULT = Path(__file__).parent / "test_vault"
+VAULT = str(Path(__file__).parent / "test_vault")
 EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
 
 
@@ -39,18 +39,18 @@ def test_empty_directory_and_non_markdown_files(tmp_path: Path) -> None:
     (tmp_path / "draft.txt").write_text("not a note")
     (tmp_path / "note.md").write_text("a note")
 
-    assert list_notes(tmp_path, "empty") == []
-    assert list_notes(tmp_path) == ["note.md"]
+    assert list_notes(str(tmp_path), "empty") == []
+    assert list_notes(str(tmp_path)) == ["note.md"]
 
 
 def test_missing_vault_or_directory_raises_file_not_found(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        list_notes(tmp_path / "absent")
+        list_notes(str(tmp_path / "absent"))
     with pytest.raises(FileNotFoundError):
-        list_notes(tmp_path, "absent")
+        list_notes(str(tmp_path), "absent")
 
 
 @pytest.mark.parametrize("path", ["../outside", "/tmp", "nested/../../outside"])
 def test_rejects_paths_outside_vault(tmp_path: Path, path: str) -> None:
     with pytest.raises(ValueError):
-        list_notes(tmp_path, path)
+        list_notes(str(tmp_path), path)

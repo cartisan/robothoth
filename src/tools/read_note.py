@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def read_note(vault_path: Path, notepath: str) -> str:
+def read_note(vault_path: str, notepath: str) -> str:
     relative_path = Path(notepath)
     if (
         not notepath
@@ -11,7 +11,7 @@ def read_note(vault_path: Path, notepath: str) -> str:
     ):
         raise ValueError("notepath must be a vault-relative Markdown file path")
 
-    vault = vault_path.resolve()
+    vault = Path(vault_path).resolve()
     note = (vault / relative_path).resolve()
     if not note.is_relative_to(vault):
         raise ValueError("notepath must remain inside the vault")

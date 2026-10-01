@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 
-def search_notes(vault_path: Path, query: str) -> list[str]:
+def search_notes(vault_path: str, query: str) -> list[str]:
     """Find vault-relative Markdown note paths whose content matches a regex."""
     if not query:
         raise ValueError("Search query must not be empty")
@@ -12,7 +12,7 @@ def search_notes(vault_path: Path, query: str) -> list[str]:
     except re.error as error:
         raise ValueError(f"Invalid search regex: {error}") from error
 
-    vault_root = vault_path.resolve()
+    vault_root = Path(vault_path).resolve()
     if not vault_root.is_dir():
         raise FileNotFoundError(vault_path)
 

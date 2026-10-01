@@ -6,10 +6,10 @@ from src.tools.read_note import read_note
 WIKILINK = re.compile(r"\[\[([^\]]+)\]\]")
 
 
-def get_outgoing_links(vault_path: Path, notepath: str) -> list[str]:
+def get_outgoing_links(vault_path: str, notepath: str) -> list[str]:
     """Return existing Markdown notes linked from a vault-relative note."""
     content = read_note(vault_path, notepath)
-    vault = vault_path.resolve()
+    vault = Path(vault_path).resolve()
 
     notes: set[str] = set()
     by_stem: dict[str, list[str]] = {}

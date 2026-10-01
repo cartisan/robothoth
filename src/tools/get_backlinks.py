@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 
-def get_backlinks(vault_path: Path, notepath: str) -> list[str]:
+def get_backlinks(vault_path: str, notepath: str) -> list[str]:
     """Return vault-relative paths of Markdown notes linking to a note."""
     relative_path = Path(notepath)
     if (
@@ -13,7 +13,7 @@ def get_backlinks(vault_path: Path, notepath: str) -> list[str]:
     ):
         raise ValueError("notepath must be a vault-relative Markdown file path")
 
-    vault = vault_path.resolve()
+    vault = Path(vault_path).resolve()
     requested = (vault / relative_path).resolve()
     if not requested.is_relative_to(vault):
         raise ValueError("notepath must remain inside the vault")
