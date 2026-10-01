@@ -24,3 +24,8 @@ dist/
 .env
 .env.*
 !.env.example
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/pyLspTools.xml
+/.idea/robothoth.iml
+/.idea/vcs.xml
