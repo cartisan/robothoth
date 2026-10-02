@@ -2,12 +2,17 @@
 name = "robothoth"
 version = "0.1.0"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "python-dotenv==1.2.3",
+    "openai==3.22.1  ",
+]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
     "ruff>=0.14.0",
+    "mypy==2.3.1",
+    "pre-commit==4.6.2",
 ]
 
 [tool.pytest.ini_options]
