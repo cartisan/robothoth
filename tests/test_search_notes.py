@@ -1,8 +1,14 @@
+import importlib
+import json
+import multiprocessing
+import time
 from pathlib import Path
 
 import pytest
 
 from src.tools.search_notes import search_notes
+
+search_module = importlib.import_module("src.tools.search_notes")
 
 TEST_VAULT = str(Path(__file__).parent / "test_vault")
 EVALUATION_DIR = "ai engineering/2 areas/ai engineering/evaluation"
@@ -64,3 +70,55 @@ def test_empty_or_invalid_regex_raises_value_error(tmp_path: Path, query: str) -
     """Reject empty and syntactically invalid regular expressions."""
     with pytest.raises(ValueError):
         search_notes(str(tmp_path), query)
+
+
+def test_pathological_regex_times_out_and_worker_is_reaped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bound catastrophic backtracking and clean up its isolated worker."""
+    (tmp_path / "long.md").write_text("a" * 100_000 + "!", encoding="utf-8")
+    timeout = 0.5
+    monkeypatch.setattr(search_module, "SEARCH_TIMEOUT_SECONDS", timeout)
+    children_before = {child.pid for child in multiprocessing.active_children()}
+
+    # A normal regex completes under the same budget on the same input.
+    assert search_notes(str(tmp_path), r"a+!") == ["long.md"]
+    started = time.monotonic()
+    with pytest.raises(search_module.SearchTimeoutError):
+        search_notes(str(tmp_path), r"(a+)+$")
+
+    assert time.monotonic() - started < timeout + 1.0
+    assert {child.pid for child in multiprocessing.active_children()} == children_before
+
+
+def test_pathological_regex_returns_controlled_dispatch_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep a model-provided expensive regex inside the public error envelope."""
+    from src.tools.dispatch import dispatch_tool_call
+
+    (tmp_path / "long.md").write_text("a" * 100_000 + "!", encoding="utf-8")
+    monkeypatch.setattr(search_module, "SEARCH_TIMEOUT_SECONDS", 0.5)
+    started = time.monotonic()
+    result = json.loads(
+        dispatch_tool_call(
+            "search_notes", json.dumps({"query": r"(a+)+$"}), str(tmp_path)
+        )
+    )
+
+    assert time.monotonic() - started < 1.5
+    assert result == {
+        "ok": False,
+        "error": {
+            "code": "search_timeout",
+            "message": "Search exceeded its time limit.",
+        },
+    }
+
+
+def test_invalid_encoding_survives_worker_boundary(tmp_path: Path) -> None:
+    """Preserve decoding failures when they are sent back from the worker."""
+    (tmp_path / "broken.md").write_bytes(b"\xff")
+
+    with pytest.raises(UnicodeDecodeError):
+        search_notes(str(tmp_path), "anything")

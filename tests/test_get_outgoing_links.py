@@ -76,6 +76,27 @@ def test_note_with_no_links_returns_empty_list(tmp_path: Path) -> None:
     assert get_outgoing_links(str(tmp_path), "plain.md") == []
 
 
+@pytest.mark.parametrize(
+    "link", ["Release 1.2.md", "Release 1.2.md#Heading|alias", "area/Release 1.2.md"]
+)
+def test_markdown_target_with_dotted_stem(tmp_path: Path, link: str) -> None:
+    """Keep dotted Markdown stems when resolving explicit .md targets."""
+    (tmp_path / "area").mkdir()
+    (tmp_path / "area" / "Release 1.2.md").write_text("", encoding="utf-8")
+    (tmp_path / "source.md").write_text(f"[[{link}]]", encoding="utf-8")
+
+    assert get_outgoing_links(str(tmp_path), "source.md") == ["area/Release 1.2.md"]
+
+
+def test_qualified_attachment_target_is_not_a_markdown_link(tmp_path: Path) -> None:
+    """Reject attachment extensions even when a matching .md note exists."""
+    (tmp_path / "area").mkdir()
+    (tmp_path / "area" / "image.png.md").write_text("", encoding="utf-8")
+    (tmp_path / "source.md").write_text("![[area/image.png]]", encoding="utf-8")
+
+    assert get_outgoing_links(str(tmp_path), "source.md") == []
+
+
 def test_missing_source_raises_file_not_found(tmp_path: Path) -> None:
     """Raise FileNotFoundError when the source note is missing."""
     with pytest.raises(FileNotFoundError):

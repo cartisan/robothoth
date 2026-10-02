@@ -66,6 +66,27 @@ def test_unique_unqualified_stem_and_duplicate_links_return_one_source(
     assert get_backlinks(str(tmp_path), "target.md") == ["a.md", "z.md"]
 
 
+@pytest.mark.parametrize(
+    "link", ["Release 1.2.md", "Release 1.2.md#Heading|alias", "area/Release 1.2.md"]
+)
+def test_markdown_target_with_dotted_stem(tmp_path: Path, link: str) -> None:
+    """Keep dotted Markdown stems when resolving explicit .md targets."""
+    (tmp_path / "area").mkdir()
+    (tmp_path / "area" / "Release 1.2.md").write_text("", encoding="utf-8")
+    (tmp_path / "source.md").write_text(f"[[{link}]]", encoding="utf-8")
+
+    assert get_backlinks(str(tmp_path), "area/Release 1.2.md") == ["source.md"]
+
+
+def test_qualified_attachment_target_is_not_a_markdown_link(tmp_path: Path) -> None:
+    """Reject attachment extensions even when a matching .md note exists."""
+    (tmp_path / "area").mkdir()
+    (tmp_path / "area" / "image.png.md").write_text("", encoding="utf-8")
+    (tmp_path / "source.md").write_text("![[area/image.png]]", encoding="utf-8")
+
+    assert get_backlinks(str(tmp_path), "area/image.png.md") == []
+
+
 def test_missing_requested_note_raises_file_not_found(tmp_path: Path) -> None:
     """Raise FileNotFoundError when the backlink target is missing."""
     with pytest.raises(FileNotFoundError):

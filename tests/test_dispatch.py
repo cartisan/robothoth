@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ def vault(tmp_path: Path) -> str:
     ("name", "arguments", "expected"),
     [
         ("list_notes", {}, ["Beta.md", "folder/Alpha.md"]),
+        ("list_notes", {"path": None}, ["Beta.md", "folder/Alpha.md"]),
         ("list_notes", {"path": "folder"}, ["folder/Alpha.md"]),
         ("read_note", {"notepath": "folder/Alpha.md"}, "Python [[Beta]]"),
         ("search_notes", {"query": "pyth.n"}, ["folder/Alpha.md"]),
@@ -28,7 +30,7 @@ def vault(tmp_path: Path) -> str:
     ],
 )
 def test_dispatches_each_tool(
-    vault: str, name: str, arguments: dict[str, str], expected: str | list[str]
+    vault: str, name: str, arguments: dict[str, str | None], expected: str | list[str]
 ) -> None:
     """Dispatch each supported tool and return its successful JSON result."""
     output = dispatch.dispatch_tool_call(name, json.dumps(arguments), vault)
@@ -47,6 +49,12 @@ def test_dispatches_each_tool(
         ("read_note", '{"notepath": null}'),
         ("read_note", '{"notepath": "Beta.md", "extra": true}'),
         ("search_notes", '{"query": 7}'),
+        ("search_notes", '{"query": null}'),
+        ("search_notes", '{}'),
+        ("get_backlinks", '{"notepath": null}'),
+        ("get_backlinks", '{}'),
+        ("get_outgoing_links", '{"notepath": false}'),
+        ("get_outgoing_links", '{}'),
     ],
 )
 def test_rejects_bad_model_arguments(
@@ -89,10 +97,14 @@ def test_translates_io_error_without_exposing_path(
     vault: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Hide filesystem error details while preserving the public I/O code."""
-    def fail_read(_vault_path: str, _notepath: str) -> str:
+    def fail_read(_vault_path: str, notepath: str) -> str:
         raise PermissionError("private path")
 
-    monkeypatch.setattr(dispatch, "read_note", fail_read)
+    monkeypatch.setitem(
+        dispatch._TOOLS,
+        "read_note",
+        replace(dispatch._TOOLS["read_note"], tool=fail_read),
+    )
     output = json.loads(
         dispatch.dispatch_tool_call("read_note", '{"notepath": "Beta.md"}', vault)
     )
@@ -120,10 +132,14 @@ def test_translates_unexpected_error_without_exposing_details(
     vault: str, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Hide unexpected exception details from callers while logging them."""
-    def fail_read(_vault_path: str, _notepath: str) -> str:
+    def fail_read(_vault_path: str, notepath: str) -> str:
         raise RuntimeError("private detail")
 
-    monkeypatch.setattr(dispatch, "read_note", fail_read)
+    monkeypatch.setitem(
+        dispatch._TOOLS,
+        "read_note",
+        replace(dispatch._TOOLS["read_note"], tool=fail_read),
+    )
     output = json.loads(
         dispatch.dispatch_tool_call("read_note", '{"notepath": "Beta.md"}', vault)
     )
@@ -133,3 +149,37 @@ def test_translates_unexpected_error_without_exposing_details(
         "error": {"code": "internal_error", "message": "Tool failed unexpectedly."},
     }
     assert "private detail" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [({"text": "hello"}, "hello!"), ({"text": "hello", "suffix": None}, "hello")],
+)
+def test_dispatches_registered_tool_with_shared_validation(
+    vault: str,
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: dict[str, str | None],
+    expected: str,
+) -> None:
+    """A registered handler works without adding a tool-specific dispatch branch."""
+    def echo(_vault_path: str, text: str, *, suffix: str | None = "!") -> str:
+        return text + (suffix or "")
+
+    monkeypatch.setitem(
+        dispatch._TOOLS,
+        "echo",
+        dispatch.ToolSpec(
+            echo,
+            {
+                "text": dispatch.ArgumentSpec(),
+                "suffix": dispatch.ArgumentSpec(required=False, nullable=True),
+            },
+        ),
+    )
+
+    assert json.loads(
+        dispatch.dispatch_tool_call("echo", json.dumps(arguments), vault)
+    ) == {"ok": True, "result": expected}
+    assert json.loads(
+        dispatch.dispatch_tool_call("echo", '{"text": null}', vault)
+    )["error"]["code"] == "invalid_arguments"
