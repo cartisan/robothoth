@@ -5,7 +5,7 @@ import pytest
 from src.tools.get_backlinks import get_backlinks
 
 VAULT = str(Path(__file__).parent / "test_vault")
-EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
+EVALUATION = "2 areas/ai engineering/evaluation"
 
 
 def test_finds_real_vault_backlinks_from_wikilinks_and_heading_links() -> None:

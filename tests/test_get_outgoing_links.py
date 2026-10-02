@@ -5,7 +5,7 @@ import pytest
 from src.tools.get_outgoing_links import get_outgoing_links
 
 VAULT = str(Path(__file__).parent / "test_vault")
-EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
+EVALUATION = "2 areas/ai engineering/evaluation"
 
 
 def test_real_vault_resolves_aliases_and_deduplicates_links() -> None:

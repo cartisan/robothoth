@@ -6,13 +6,13 @@ from src.tools.read_note import read_note
 
 VAULT = str(Path(__file__).parent / "test_vault")
 NESTED_NOTE = (
-    "ai engineering/2 areas/ai engineering/evaluation/AI Evaluation Metrics.md"
+    "2 areas/ai engineering/evaluation/AI Evaluation Metrics.md"
 )
 
 
 @pytest.mark.parametrize(
     "notepath",
-    ["ai engineering/Index.md", NESTED_NOTE],
+    ["Index.md", NESTED_NOTE],
 )
 def test_read_note_returns_full_utf8_content(notepath: str) -> None:
     """Read complete UTF-8 content from root and nested Markdown notes."""
@@ -24,7 +24,7 @@ def test_read_note_returns_full_utf8_content(notepath: str) -> None:
 def test_read_note_raises_for_missing_note() -> None:
     """Raise FileNotFoundError when the requested note is missing."""
     with pytest.raises(FileNotFoundError):
-        read_note(VAULT, "ai engineering/Does Not Exist.md")
+        read_note(VAULT, "Does Not Exist.md")
 
 
 def test_read_note_rejects_non_markdown_file(tmp_path: Path) -> None:

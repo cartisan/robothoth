@@ -11,7 +11,7 @@ from src.tools.search_notes import search_notes
 search_module = importlib.import_module("src.tools.search_notes")
 
 TEST_VAULT = str(Path(__file__).parent / "test_vault")
-EVALUATION_DIR = "ai engineering/2 areas/ai engineering/evaluation"
+EVALUATION_DIR = "2 areas/ai engineering/evaluation"
 
 
 def test_searches_real_vault_content_case_insensitively() -> None:

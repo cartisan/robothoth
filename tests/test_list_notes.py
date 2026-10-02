@@ -5,7 +5,7 @@ import pytest
 from src.tools.list_notes import list_notes
 
 VAULT = str(Path(__file__).parent / "test_vault")
-EVALUATION = "ai engineering/2 areas/ai engineering/evaluation"
+EVALUATION = "2 areas/ai engineering/evaluation"
 
 
 def test_lists_all_vault_notes_as_sorted_relative_markdown_paths() -> None:
@@ -14,25 +14,25 @@ def test_lists_all_vault_notes_as_sorted_relative_markdown_paths() -> None:
 
     assert len(notes) == 14
     assert notes == sorted(notes)
-    assert "ai engineering/Index.md" in notes
+    assert "Index.md" in notes
     assert f"{EVALUATION}/LLM-as-a-Judge.md" in notes
-    assert "ai engineering/2 areas/machine learning/z> MOC ML.md" in notes
+    assert "2 areas/machine learning/z> MOC ML.md" in notes
     assert all(note.endswith(".md") and not note.startswith("/") for note in notes)
 
 
 def test_filters_to_nested_directory_recursively() -> None:
     """Limit recursive listing to a requested nested directory."""
-    notes = list_notes(VAULT, "ai engineering/2 areas/ai engineering")
+    notes = list_notes(VAULT, "2 areas/ai engineering")
 
     assert len(notes) == 12
     assert notes == sorted(notes)
     assert f"{EVALUATION}/RAG.md" in notes
     assert (
-        "ai engineering/2 areas/ai engineering/"
+        "2 areas/ai engineering/"
         "Agentic Software Engineering Factory.md"
     ) in notes
     assert all(
-        note.startswith("ai engineering/2 areas/ai engineering/") for note in notes
+        note.startswith("2 areas/ai engineering/") for note in notes
     )
 
 
