@@ -79,6 +79,41 @@ def test_provider_uses_registered_declarations() -> None:
     assert provider.tools == registry.declarations()
 
 
+@pytest.mark.parametrize(
+    ("total_tokens", "output", "expected_cost", "expected_output"),
+    [
+        (120, "Done", "120 tokens", "Done"),
+        (0, "", "0 tokens", ""),
+        (None, None, "unknown", "(no output)"),
+        (
+            None,
+            "list_notes({})\nread_note({})",
+            "unknown",
+            "list_notes({})\nread_note({})",
+        ),
+    ],
+)
+def test_call_trace_string(
+    total_tokens: int | None,
+    output: str | None,
+    expected_cost: str,
+    expected_output: str,
+) -> None:
+    """Display token cost, rounded latency, and available output explicitly."""
+    call = provider.CallTrace(
+        model="test-model",
+        elapsed_seconds=1.23456,
+        total_tokens=total_tokens,
+        output=output,
+    )
+    assert str(call) == (
+        "Model: test-model\n"
+        "Latency: 1.235s\n"
+        f"Total cost: {expected_cost}\n"
+        f"Output: {expected_output}"
+    )
+
+
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     """Return immediate text and record usage and API-only elapsed time."""
     client = MagicMock()
@@ -112,6 +147,7 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
             cached_tokens=30,
             cache_write_tokens=10,
             reasoning_tokens=5,
+            output="Done",
         )
     ]
     assert trace.total_cost() == 120
@@ -125,7 +161,17 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     )
     responses = iter(
         [
-            make_response(reasoning, tool_call("a"), tool_call("b"), text="Checking"),
+            make_response(
+                reasoning,
+                tool_call("a", '{ "path": null }'),
+                ResponseFunctionToolCall(
+                    type="function_call",
+                    name="read_note",
+                    arguments='{"notepath": "Beta.md"}',
+                    call_id="b",
+                ),
+                text="Checking",
+            ),
             make_response(tool_call("c")),
             make_response(text="Found it"),
         ]
@@ -177,6 +223,11 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     )
     assert trace.total_cost() == 360
     assert trace.total_latency() == 6.0
+    assert [call.output for call in trace.calls] == [
+        'list_notes({ "path": null })\nread_note({"notepath": "Beta.md"})',
+        "list_notes({})",
+        "Found it",
+    ]
 
 
 def test_tool_errors_are_sent_to_model() -> None:
@@ -193,11 +244,13 @@ def test_tool_errors_are_sent_to_model() -> None:
 
     client = MagicMock()
     client.responses.create.side_effect = create
-    provider.run(client, user_prompt="Find", vault_path="vault", trace=provider.Trace())
+    trace = provider.Trace()
+    provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     history = cast(list[dict[str, object]], requests[1]["input"])
     result = json.loads(cast(str, history[-1]["output"]))
     assert history[-1]["call_id"] == "bad"
     assert result["error"]["code"] == "invalid_arguments"
+    assert trace.calls[0].output == "list_notes({)"
 
 
 def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -214,6 +267,7 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
     assert client.responses.create.call_count == 2
     assert dispatcher.call_count == 1
     assert len(trace.calls) == 2
+    assert trace.calls[-1].output == "list_notes({})"
 
 
 @pytest.mark.parametrize("limit", [0, -1])
@@ -242,6 +296,7 @@ def test_noncompleted_responses_are_errors(status: str) -> None:
     with pytest.raises(RuntimeError, match=status):
         provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert trace.total_cost() == 120
+    assert trace.calls[0].output == "Partial"
     client.responses.create.assert_called_once()
 
 
@@ -249,11 +304,13 @@ def test_empty_response_is_error() -> None:
     """Reject a completed response without text or function calls."""
     client = MagicMock()
     client.responses.create.return_value = make_response()
+    trace = provider.Trace()
     with pytest.raises(RuntimeError, match="neither text nor function calls"):
         provider.run(
-            client, user_prompt="Find", vault_path="vault", trace=provider.Trace()
+            client, user_prompt="Find", vault_path="vault", trace=trace
         )
     client.responses.create.assert_called_once()
+    assert trace.calls[0].output is None
 
 
 def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -270,11 +327,13 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     dispatcher = MagicMock()
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
+    trace = provider.Trace()
     with pytest.raises(RuntimeError, match="Unsupported.*custom_tool_call"):
         provider.run(
-            client, user_prompt="Find", vault_path="vault", trace=provider.Trace()
+            client, user_prompt="Find", vault_path="vault", trace=trace
         )
     dispatcher.assert_not_called()
+    assert trace.calls[0].output == "list_notes({})"
 
 
 def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -291,8 +350,10 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     assert raised.value is error
     assert len(trace.calls) == 2
     assert trace.calls[0].total_tokens == 120
+    assert trace.calls[0].output == "list_notes({})"
     assert trace.calls[1].response_id is None
     assert trace.calls[1].total_tokens is None
+    assert trace.calls[1].output is None
     assert trace.total_cost() is None
     assert trace.total_latency() == 4.0
 
@@ -308,6 +369,7 @@ def test_missing_usage_and_independent_traces() -> None:
     provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert trace.total_cost() is None
     assert trace.calls[0].input_tokens is None
+    assert trace.calls[0].output == "Done"
     assert other.calls == []
     assert other.total_cost() == 0
 
@@ -338,6 +400,10 @@ def test_main_prints_metrics_and_closes_client(
     factory.return_value.__exit__.assert_called_once()
     output = capsys.readouterr().out
     assert "API call 1:" in output
+    assert "Model:" in output
+    assert "Latency:" in output
+    assert f"Total cost: {'unknown' if fails else '120 tokens'}" in output
+    assert f"Output: {'(no output)' if fails else 'Final answer'}" in output
     assert "Total API latency:" in output
     assert f"Total tokens: {'unknown' if fails else '120'}" in output
     if not fails:

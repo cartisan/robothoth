@@ -26,12 +26,15 @@ user_prompt = "Help me locate the file called 'Agentic Software Engineering Fact
 
 @dataclass(frozen=True)
 class CallTrace:
-    """Record token usage and elapsed seconds for one API invocation.
+    """Record model output, token usage, and latency for one API invocation.
 
     Token counts are unknown when the API supplies no usage. Cached and
     cache-write tokens are input breakdowns; reasoning tokens are an output
     breakdown. Elapsed time includes SDK retries but excludes tool execution.
-    Failed invocations have no response ID and unknown token counts.
+    Output contains all requested function calls in response order as
+    ``name(arguments_json)``, or response text when no functions are requested.
+    Tool requests take precedence over accompanying text. Invocations that fail
+    before returning a response have no response ID or output and unknown usage.
     """
 
     model: str
@@ -43,6 +46,26 @@ class CallTrace:
     cache_write_tokens: int | None = None
     reasoning_tokens: int | None = None
     total_tokens: int | None = None
+    output: str | None = None
+
+    def __str__(self) -> str:
+        """Return labeled model, latency, total token cost, and output lines.
+
+        Latency is shown in seconds with three decimal places. Missing usage
+        appears as ``unknown`` and absent output as ``(no output)``.
+        """
+        cost = (
+            f"{self.total_tokens} tokens"
+            if self.total_tokens is not None
+            else "unknown"
+        )
+        output = self.output if self.output is not None else "(no output)"
+        return (
+            f"Model: {self.model}\t"
+            f"Latency: {self.elapsed_seconds:.3f}s\t"
+            f"Total cost: {cost}\t"
+            f"Output: {output}"
+        )
 
 
 @dataclass
@@ -87,7 +110,10 @@ def run(
     result is paired with its call ID. Text accompanying function calls is
     intermediate; completion requires text without function calls. Tool error
     envelopes are returned to the model for resolution. Metrics are appended
-    to the supplied trace and remain available if the run fails.
+    to the supplied trace and remain available if the run fails. Each call trace
+    retains requested functions, including their unmodified argument JSON, or
+    response text when no functions are requested. Output is retained even for
+    responses rejected by validation or the call limit.
 
     The positive call limit counts API invocations, including the final text
     request, but not internal SDK retries. Tools requested by the last allowed
@@ -119,6 +145,14 @@ def run(
             )
             raise
         elapsed = perf_counter() - started
+        function_calls = [
+            item for item in response.output if item.type == "function_call"
+        ]
+        output = (
+            "\n".join(f"{item.name}({item.arguments})" for item in function_calls)
+            if function_calls
+            else response.output_text or None
+        )
         usage = response.usage
         trace.calls.append(
             CallTrace(
@@ -137,6 +171,7 @@ def run(
                     usage.output_tokens_details.reasoning_tokens if usage else None
                 ),
                 total_tokens=usage.total_tokens if usage else None,
+                output=output,
             )
         )
 
@@ -149,9 +184,6 @@ def run(
         input_list.extend(
             cast(ResponseInputItemParam, item.to_dict()) for item in response.output
         )
-        function_calls = [
-            item for item in response.output if item.type == "function_call"
-        ]
         if not function_calls:
             if not response.output_text:
                 raise RuntimeError(
@@ -179,7 +211,7 @@ def run(
 
 
 def main() -> None:
-    """Print the example vault answer and per-call and aggregate API metrics.
+    """Print the example vault answer, call outputs, and API metrics.
 
     Environment variables are loaded from dotenv before creating the client.
     Metrics are printed even if the run fails; unknown usage is shown explicitly.
