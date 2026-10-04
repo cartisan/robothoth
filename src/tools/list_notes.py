@@ -7,6 +7,9 @@ def list_notes(vault_path: str, path: str | None = None) -> list[str]:
     The directory is interpreted relative to ``vault_path`` and searched
     recursively. Only regular Markdown files inside the vault are returned.
 
+    Args:
+        path: Vault-relative directory to search, or null for the whole vault.
+
     Raises:
         FileNotFoundError: If the vault or requested directory does not exist.
         ValueError: If ``path`` is absolute, escapes the vault, or is not a

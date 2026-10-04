@@ -17,6 +17,7 @@ from openai.types.responses import (
 from openai.types.responses.response_output_item import ResponseOutputItem
 
 import src.openai_provider as provider
+from src.tools.registry import registry
 
 
 def make_response(
@@ -71,6 +72,11 @@ def tool_call(call_id: str, arguments: str = "{}") -> ResponseFunctionToolCall:
         arguments=arguments,
         call_id=call_id,
     )
+
+
+def test_provider_uses_registered_declarations() -> None:
+    """Advertise every registered vault function with its derived schema."""
+    assert provider.tools == registry.declarations()
 
 
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -134,7 +140,7 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     client = MagicMock()
     client.responses.create.side_effect = create
     dispatcher = MagicMock(return_value='{"ok": true, "result": []}')
-    monkeypatch.setattr(provider.dispatch, "dispatch_tool_call", dispatcher)
+    monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     ticks = iter([1.0, 2.0, 50.0, 52.0, 90.0, 93.0])
     monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = provider.Trace()
@@ -199,7 +205,7 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
     client = MagicMock()
     client.responses.create.return_value = make_response(tool_call("again"))
     dispatcher = MagicMock(return_value="{}")
-    monkeypatch.setattr(provider.dispatch, "dispatch_tool_call", dispatcher)
+    monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     trace = provider.Trace()
     with pytest.raises(RuntimeError, match="call limit \\(2\\) reached"):
         provider.run(
@@ -263,7 +269,7 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
         text="Partial",
     )
     dispatcher = MagicMock()
-    monkeypatch.setattr(provider.dispatch, "dispatch_tool_call", dispatcher)
+    monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     with pytest.raises(RuntimeError, match="Unsupported.*custom_tool_call"):
         provider.run(
             client, user_prompt="Find", vault_path="vault", trace=provider.Trace()
@@ -276,7 +282,7 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     client = MagicMock()
     error = APIConnectionError(request=httpx.Request("POST", "https://example.test"))
     client.responses.create.side_effect = [make_response(tool_call("a")), error]
-    monkeypatch.setattr(provider.dispatch, "dispatch_tool_call", MagicMock())
+    monkeypatch.setattr(provider.registry, "dispatch", MagicMock())
     ticks = iter([1.0, 2.0, 10.0, 13.0])
     monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = provider.Trace()

@@ -7,39 +7,11 @@ from openai import OpenAI
 from openai.types.responses import ResponseInputParam, ToolParam
 from openai.types.responses.response_input_param import ResponseInputItemParam
 
-from src.tools import dispatch
+from src.tools.registry import registry
 
 VAULT_HOME = "/Users/leonid/code/robothoth/tests/test_vault"
 
-tools: list[ToolParam] = [
-    {
-        "type": "function",
-        "name": "list_notes",
-        "description": """Return all notes as sorted vault-relative Markdown paths
-under an optional directory.
-
-The directory is interpreted relative to ``vault_path`` and searched
-recursively. Only regular Markdown files inside the vault are returned.
-
-Raises:
-    FileNotFoundError: If the vault or requested directory does not exist.
-    ValueError: If ``path`` is absolute, escapes the vault, or is not a
-        directory inside the vault.""",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "An optional path relative to the vault home"
-                    "for which to return notes.",
-                },
-            },
-            "required": [],
-            "additionalProperties": False,
-        },
-        "strict": None,
-    },
-]
+tools: list[ToolParam] = cast(list[ToolParam], registry.declarations())
 
 system_prompt = """You are an assistant that helps navigate an Obsidian note vault.
 The vault is located under a vault path on the local machine,
@@ -190,7 +162,7 @@ def run(
             raise RuntimeError(f"API call limit ({max_api_calls}) reached")
 
         for item in function_calls:
-            tool_result = dispatch.dispatch_tool_call(
+            tool_result = registry.dispatch(
                 name=item.name,
                 arguments_json=item.arguments,
                 vault_path=vault_path,

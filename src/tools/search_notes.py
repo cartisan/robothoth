@@ -40,6 +40,9 @@ def search_notes(vault_path: str, query: str) -> list[str]:
     and scanning run in an isolated process with a total execution budget of
     ``SEARCH_TIMEOUT_SECONDS``, including worker startup.
 
+    Args:
+        query: Case-insensitive Python regular expression to match note content.
+
     Raises:
         FileNotFoundError: If ``vault_path`` is not a directory.
         ValueError: If ``query`` is empty or is not a valid regular expression.

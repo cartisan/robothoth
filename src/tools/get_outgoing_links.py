@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from src.tools.note_links import index_notes, resolve_links
 from src.tools.read_note import read_note
+from src.tools.utils import index_notes, resolve_links
 
 
 def get_outgoing_links(vault_path: str, notepath: str) -> list[str]:
@@ -10,6 +10,9 @@ def get_outgoing_links(vault_path: str, notepath: str) -> list[str]:
     Wikilinks, aliases, heading links, and embedded-note links are resolved
     against the vault. Bare note names are followed only when they identify a
     unique note; duplicate links are returned once.
+
+    Args:
+        notepath: Vault-relative Markdown path of the source note.
 
     Raises:
         FileNotFoundError: If the source note does not exist.

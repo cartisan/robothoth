@@ -95,13 +95,13 @@ def test_pathological_regex_returns_controlled_dispatch_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Keep a model-provided expensive regex inside the public error envelope."""
-    from src.tools.dispatch import dispatch_tool_call
+    from src.tools.registry import registry
 
     (tmp_path / "long.md").write_text("a" * 100_000 + "!", encoding="utf-8")
     monkeypatch.setattr(search_module, "SEARCH_TIMEOUT_SECONDS", 0.5)
     started = time.monotonic()
     result = json.loads(
-        dispatch_tool_call(
+        registry.dispatch(
             "search_notes", json.dumps({"query": r"(a+)+$"}), str(tmp_path)
         )
     )

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import src.tools.dispatch as dispatch
+from src.tools.registry import Registry, registry
 
 
 @pytest.fixture
@@ -20,7 +20,6 @@ def vault(tmp_path: Path) -> str:
 @pytest.mark.parametrize(
     ("name", "arguments", "expected"),
     [
-        ("list_notes", {}, ["Beta.md", "folder/Alpha.md"]),
         ("list_notes", {"path": None}, ["Beta.md", "folder/Alpha.md"]),
         ("list_notes", {"path": "folder"}, ["folder/Alpha.md"]),
         ("read_note", {"notepath": "folder/Alpha.md"}, "Python [[Beta]]"),
@@ -33,7 +32,7 @@ def test_dispatches_each_tool(
     vault: str, name: str, arguments: dict[str, str | None], expected: str | list[str]
 ) -> None:
     """Dispatch each supported tool and return its successful JSON result."""
-    output = dispatch.dispatch_tool_call(name, json.dumps(arguments), vault)
+    output = registry.dispatch(name, json.dumps(arguments), vault)
 
     assert json.loads(output) == {"ok": True, "result": expected}
 
@@ -43,6 +42,7 @@ def test_dispatches_each_tool(
     [
         ("list_notes", "{"),
         ("list_notes", "[]"),
+        ("list_notes", "{}"),
         ("list_notes", '{"path": 3}'),
         ("list_notes", '{"vault_path": "/tmp"}'),
         ("read_note", "{}"),
@@ -61,7 +61,7 @@ def test_rejects_bad_model_arguments(
     vault: str, name: str, arguments_json: str
 ) -> None:
     """Reject malformed, incomplete, mistyped, and unexpected arguments."""
-    output = json.loads(dispatch.dispatch_tool_call(name, arguments_json, vault))
+    output = json.loads(registry.dispatch(name, arguments_json, vault))
 
     assert output["ok"] is False
     assert output["error"]["code"] == "invalid_arguments"
@@ -69,7 +69,7 @@ def test_rejects_bad_model_arguments(
 
 def test_rejects_unknown_tool(vault: str) -> None:
     """Return an unknown_tool error for an unsupported tool name."""
-    output = json.loads(dispatch.dispatch_tool_call("delete_note", "{}", vault))
+    output = json.loads(registry.dispatch("delete_note", "{}", vault))
 
     assert output["error"]["code"] == "unknown_tool"
 
@@ -86,7 +86,7 @@ def test_translates_expected_tool_errors(
     vault: str, name: str, arguments_json: str, code: str
 ) -> None:
     """Translate expected tool failures into stable public error codes."""
-    output = json.loads(dispatch.dispatch_tool_call(name, arguments_json, vault))
+    output = json.loads(registry.dispatch(name, arguments_json, vault))
 
     assert output["ok"] is False
     assert output["error"]["code"] == code
@@ -101,12 +101,12 @@ def test_translates_io_error_without_exposing_path(
         raise PermissionError("private path")
 
     monkeypatch.setitem(
-        dispatch._TOOLS,
+        registry._tools,
         "read_note",
-        replace(dispatch._TOOLS["read_note"], tool=fail_read),
+        replace(registry._tools["read_note"], tool=fail_read),
     )
     output = json.loads(
-        dispatch.dispatch_tool_call("read_note", '{"notepath": "Beta.md"}', vault)
+        registry.dispatch("read_note", '{"notepath": "Beta.md"}', vault)
     )
 
     assert output == {
@@ -120,7 +120,7 @@ def test_invalid_note_encoding_is_an_io_error(tmp_path: Path) -> None:
     (tmp_path / "broken.md").write_bytes(b"\xff")
 
     output = json.loads(
-        dispatch.dispatch_tool_call(
+        registry.dispatch(
             "read_note", '{"notepath": "broken.md"}', str(tmp_path)
         )
     )
@@ -136,12 +136,12 @@ def test_translates_unexpected_error_without_exposing_details(
         raise RuntimeError("private detail")
 
     monkeypatch.setitem(
-        dispatch._TOOLS,
+        registry._tools,
         "read_note",
-        replace(dispatch._TOOLS["read_note"], tool=fail_read),
+        replace(registry._tools["read_note"], tool=fail_read),
     )
     output = json.loads(
-        dispatch.dispatch_tool_call("read_note", '{"notepath": "Beta.md"}', vault)
+        registry.dispatch("read_note", '{"notepath": "Beta.md"}', vault)
     )
 
     assert output == {
@@ -151,35 +151,106 @@ def test_translates_unexpected_error_without_exposing_details(
     assert "private detail" in caplog.text
 
 
-@pytest.mark.parametrize(
-    ("arguments", "expected"),
-    [({"text": "hello"}, "hello!"), ({"text": "hello", "suffix": None}, "hello")],
-)
-def test_dispatches_registered_tool_with_shared_validation(
-    vault: str,
-    monkeypatch: pytest.MonkeyPatch,
-    arguments: dict[str, str | None],
-    expected: str,
-) -> None:
-    """A registered handler works without adding a tool-specific dispatch branch."""
-    def echo(_vault_path: str, text: str, *, suffix: str | None = "!") -> str:
+def test_declarations_and_dispatch_agree(vault: str) -> None:
+    """Use each public schema's fields and types for dispatch validation."""
+    declarations = registry.declarations()
+    assert {item["name"] for item in declarations} == set(registry._tools)
+    for declaration in declarations:
+        name = declaration["name"]
+        spec = registry._tools[name]
+        parameters = declaration["parameters"]
+        properties = parameters["properties"]
+        assert declaration["type"] == "function"
+        assert declaration["strict"] is True
+        assert declaration["description"] == spec.description
+        assert parameters["type"] == "object"
+        assert parameters["additionalProperties"] is False
+        assert set(parameters["required"]) == set(properties) == set(spec.arguments)
+        assert "vault_path" not in properties
+        valid = {field: "Beta.md" for field in properties}
+        for field, schema in properties.items():
+            assert schema["description"] == spec.arguments[field].description
+            assert schema["type"] == (
+                ["string", "null"] if spec.arguments[field].nullable else "string"
+            )
+            registry._validate_arguments(spec, valid)
+            for bad in (42, False, list[str](), dict[str, str]()):
+                with pytest.raises(ValueError):
+                    registry._validate_arguments(spec, {**valid, field: bad})
+            if spec.arguments[field].nullable:
+                registry._validate_arguments(spec, {**valid, field: None})
+            else:
+                with pytest.raises(ValueError):
+                    registry._validate_arguments(spec, {**valid, field: None})
+            with pytest.raises(ValueError):
+                registry._validate_arguments(
+                    spec, {key: value for key, value in valid.items() if key != field}
+                )
+        with pytest.raises(ValueError):
+            registry._validate_arguments(spec, {**valid, "unexpected": "value"})
+        output = json.loads(registry.dispatch(name, json.dumps(valid), vault))
+        if not output["ok"]:
+            assert output["error"]["code"] != "invalid_arguments"
+
+
+def test_registration_rejects_bad_documentation_and_signatures() -> None:
+    """Reject missing or mismatched Args and unsupported call shapes."""
+    def missing(vault_path: str, value: str) -> str:
+        return value
+
+    def undocumented(vault_path: str, value: str) -> str:
+        """Return a value.
+
+        Args:
+            other: A different argument.
+        """
+        return value
+
+    def unsupported(vault_path: str, count: int) -> str:
+        """Return a count.
+
+        Args:
+            count: Number to return.
+        """
+        return str(count)
+
+    def variadic(vault_path: str, *values: str) -> str:
+        """Return values.
+
+        Args:
+            values: Values to join.
+        """
+        return "".join(values)
+
+    for tool in (missing, undocumented, unsupported, variadic):
+        with pytest.raises(ValueError):
+            Registry((tool,))
+
+
+def test_isolated_registry_uses_its_own_tools(vault: str) -> None:
+    """Declare and dispatch a documented tool from an independent registry."""
+
+    def echo(vault_path: str, text: str, suffix: str | None = None) -> str:
+        """Return text with an optional suffix.
+
+        Args:
+            text: Text to echo.
+            suffix: Suffix to append, or null for none.
+        """
         return text + (suffix or "")
 
-    monkeypatch.setitem(
-        dispatch._TOOLS,
-        "echo",
-        dispatch.ToolSpec(
-            echo,
-            {
-                "text": dispatch.ArgumentSpec(),
-                "suffix": dispatch.ArgumentSpec(required=False, nullable=True),
-            },
-        ),
+    isolated = Registry((echo,))
+    assert [item["name"] for item in isolated.declarations()] == ["echo"]
+    output = json.loads(
+        isolated.dispatch("echo", '{"text": "hi", "suffix": null}', vault)
     )
-
-    assert json.loads(
-        dispatch.dispatch_tool_call("echo", json.dumps(arguments), vault)
-    ) == {"ok": True, "result": expected}
-    assert json.loads(
-        dispatch.dispatch_tool_call("echo", '{"text": null}', vault)
-    )["error"]["code"] == "invalid_arguments"
+    assert output == {
+        "ok": True,
+        "result": "hi",
+    }
+    missing = json.loads(isolated.dispatch("echo", '{"text": "hi"}', vault))
+    assert missing["error"]["code"] == "invalid_arguments"
+    unknown = json.loads(isolated.dispatch("read_note", "{}", vault))
+    assert unknown["error"]["code"] == "unknown_tool"
+    with pytest.raises(ValueError, match="Duplicate tool name"):
+        Registry((echo, echo))
