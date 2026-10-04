@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.tools.note_links import index_notes, resolve_links
+from src.tools.utils import index_notes, resolve_links
 
 
 def get_backlinks(vault_path: str, notepath: str) -> list[str]:
@@ -9,6 +9,9 @@ def get_backlinks(vault_path: str, notepath: str) -> list[str]:
     Wikilinks, aliases, heading links, and embedded-note links are resolved
     against the vault. Bare note names must identify a unique note; invalid,
     missing, ambiguous, and non-Markdown targets are ignored.
+
+    Args:
+        notepath: Vault-relative Markdown path of the target note.
 
     Raises:
         FileNotFoundError: If the requested note does not exist.

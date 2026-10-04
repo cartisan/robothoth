@@ -7,6 +7,9 @@ def read_note(vault_path: str, notepath: str) -> str:
     Symlinks and path components that resolve outside the vault are rejected,
     so callers can use the result without granting access to other files.
 
+    Args:
+        notepath: Vault-relative path of the Markdown note to read.
+
     Raises:
         FileNotFoundError: If the requested note does not exist.
         ValueError: If ``notepath`` is not a relative Markdown path inside the
