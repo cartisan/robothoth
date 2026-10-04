@@ -107,9 +107,9 @@ def test_call_trace_string(
         output=output,
     )
     assert str(call) == (
-        "Model: test-model\n"
-        "Latency: 1.235s\n"
-        f"Total cost: {expected_cost}\n"
+        "Model: test-model\t"
+        "Latency: 1.235s\t"
+        f"Total cost: {expected_cost}\t"
         f"Output: {expected_output}"
     )
 

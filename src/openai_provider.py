@@ -49,10 +49,11 @@ class CallTrace:
     output: str | None = None
 
     def __str__(self) -> str:
-        """Return labeled model, latency, total token cost, and output lines.
+        """Return tab-separated model, latency, total token cost, and output.
 
         Latency is shown in seconds with three decimal places. Missing usage
-        appears as ``unknown`` and absent output as ``(no output)``.
+        appears as ``unknown`` and absent output as ``(no output)``. Line breaks
+        within the output are preserved.
         """
         cost = (
             f"{self.total_tokens} tokens"
