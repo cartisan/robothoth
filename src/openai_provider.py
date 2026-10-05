@@ -13,7 +13,7 @@ VAULT_HOME = "/Users/leonid/code/robothoth/tests/test_vault"
 
 tools: list[ToolParam] = cast(list[ToolParam], registry.declarations())
 
-system_prompt = """You are an assistant that helps navigate an Obsidian note vault.
+SYSTEM_PROMPT = """You are an assistant that helps navigate an Obsidian note vault.
 The vault is located under a vault path on the local machine,
 and is managed by your harness.
 You only need to operate on file paths relative to that vault path.
@@ -130,8 +130,9 @@ def run(
     if max_api_calls <= 0:
         raise ValueError("max_api_calls must be positive")
 
+    # noinspection bad-assignment
     input_list: ResponseInputParam = [
-        {"role": "developer", "content": system_prompt},
+        {"role": "developer", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
     ]
     for call_number in range(1, max_api_calls + 1):
@@ -200,6 +201,7 @@ def run(
                 arguments_json=item.arguments,
                 vault_path=vault_path,
             )
+            # noinspection bad-argument-type
             input_list.append(
                 {
                     "type": "function_call_output",

@@ -199,7 +199,7 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     assert len(requests) == 3
     initial = cast(list[dict[str, object]], requests[0]["input"])
     assert initial == [
-        {"role": "developer", "content": provider.system_prompt},
+        {"role": "developer", "content": provider.SYSTEM_PROMPT},
         {"role": "user", "content": "Find it"},
     ]
     second = cast(list[dict[str, object]], requests[1]["input"])
