@@ -1,3 +1,5 @@
+import json
+from copy import deepcopy
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import cast
@@ -5,6 +7,9 @@ from typing import cast
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.responses import ResponseInputParam, ToolParam
+from openai.types.responses.response_create_params import (
+    ResponseCreateParamsNonStreaming,
+)
 from openai.types.responses.response_input_param import ResponseInputItemParam
 
 from src.tools.registry import registry
@@ -25,6 +30,71 @@ user_prompt = "Help me locate the file called 'Agentic Software Engineering Fact
 
 
 @dataclass(frozen=True)
+class RequestTrace:
+    """Retain an independent snapshot of all supplied API request arguments.
+
+    Nested argument values are copied on construction so later conversation or
+    tool declaration changes cannot alter the recorded request.
+    """
+
+    arguments: dict[str, object]
+
+    def __post_init__(self) -> None:
+        """Detach the stored arguments from the caller's mutable request data."""
+        object.__setattr__(self, "arguments", deepcopy(self.arguments))
+
+    def __str__(self) -> str:
+        """Return prompt message roles and text in order on one line.
+
+        String content and input/output text blocks are displayed. Non-message
+        inputs and non-text blocks are omitted. A string input is shown as a
+        user message. JSON quoting escapes line breaks and tabs in message text;
+        model, tools, and other request arguments are retained but not displayed.
+        """
+        request_input = self.arguments.get("input", [])
+        if isinstance(request_input, str):
+            return f"user: {json.dumps(request_input, ensure_ascii=False)}"
+        messages: list[str] = []
+        if isinstance(request_input, list):
+            for item in request_input:
+                if not isinstance(item, dict) or "role" not in item:
+                    continue
+                role = item["role"]
+                content = item.get("content")
+                if not isinstance(role, str):
+                    continue
+                if isinstance(content, str):
+                    text = content
+                elif isinstance(content, list):
+                    text = "".join(
+                        block["text"]
+                        for block in content
+                        if isinstance(block, dict)
+                        and block.get("type") in {"input_text", "output_text"}
+                        and isinstance(block.get("text"), str)
+                    )
+                else:
+                    continue
+                messages.append(f"{role}: {json.dumps(text, ensure_ascii=False)}")
+        return " | ".join(messages)
+
+
+@dataclass
+class ToolCallTrace:
+    """Record a requested function and its exact returned output.
+
+    Arguments retain the API's original JSON string. Output is the unmodified
+    dispatcher envelope, including tool errors, or None if no result returned.
+    Requests rejected before dispatch and dispatches that raise have no output.
+    """
+
+    call_id: str
+    name: str
+    arguments: str
+    output: str | None = None
+
+
+@dataclass(frozen=True)
 class CallTrace:
     """Record model output, token usage, and latency for one API invocation.
 
@@ -35,6 +105,8 @@ class CallTrace:
     ``name(arguments_json)``, or response text when no functions are requested.
     Tool requests take precedence over accompanying text. Invocations that fail
     before returning a response have no response ID or output and unknown usage.
+    Each instance owns its tool call list, in response order. Tool records retain
+    results as execution completes, even if a later tool or API invocation fails.
     """
 
     model: str
@@ -47,13 +119,17 @@ class CallTrace:
     reasoning_tokens: int | None = None
     total_tokens: int | None = None
     output: str | None = None
+    tool_calls: list[ToolCallTrace] = field(default_factory=list)
 
     def __str__(self) -> str:
-        """Return tab-separated model, latency, total token cost, and output.
+        """Return model metrics, response output, and requested tool results.
 
         Latency is shown in seconds with three decimal places. Missing usage
         appears as ``unknown`` and absent output as ``(no output)``. Line breaks
-        within the output are preserved.
+        within model output and tool results are replaced with spaces for display;
+        stored text remains unchanged. Each tool result appears on a separate
+        line with its name.
+        Missing results appear as ``(not executed)``; empty results stay empty.
         """
         cost = (
             f"{self.total_tokens} tokens"
@@ -61,12 +137,21 @@ class CallTrace:
             else "unknown"
         )
         output = self.output if self.output is not None else "(no output)"
-        return (
+        output = " ".join(output.splitlines())
+        summary = (
             f"Model: {self.model}\t"
             f"Latency: {self.elapsed_seconds:.3f}s\t"
             f"Total cost: {cost}\t"
             f"Output: {output}"
         )
+        for tool in self.tool_calls:
+            result = (
+                " ".join(tool.output.splitlines())
+                if tool.output is not None
+                else "(not executed)"
+            )
+            summary += f"\n\tName: {tool.name}\tResult: {result}"
+        return summary
 
 
 @dataclass
@@ -75,9 +160,12 @@ class Trace:
 
     Each instance owns its call list. Costs represent tokens rather than money,
     and latency represents API invocation time rather than whole-run time.
+    The initial request snapshot is separate from API response metrics and is
+    absent until a valid run attempts its first API invocation.
     """
 
     calls: list[CallTrace] = field(default_factory=list)
+    initial_request: RequestTrace | None = None
 
     def total_cost(self) -> int | None:
         """Return total tokens, or None if any invocation has unknown usage.
@@ -114,7 +202,13 @@ def run(
     to the supplied trace and remain available if the run fails. Each call trace
     retains requested functions, including their unmodified argument JSON, or
     response text when no functions are requested. Output is retained even for
-    responses rejected by validation or the call limit.
+    responses rejected by validation or the call limit. Structured tool records
+    on the requesting API trace retain call IDs, names, original arguments, and
+    exact returned envelopes. Results remain available if a later call fails;
+    requests without a returned result have None as their output.
+    The initial request snapshots every supplied API argument before invocation,
+    including all prompt messages. A valid run replaces this snapshot, while
+    existing call traces are appended to; an invalid call limit leaves it intact.
 
     The positive call limit counts API invocations, including the final text
     request, but not internal SDK retries. Tools requested by the last allowed
@@ -135,12 +229,19 @@ def run(
         {"role": "developer", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
     ]
+    request_arguments: ResponseCreateParamsNonStreaming = {
+        "model": model,
+        "tools": tools,
+        "input": input_list,
+    }
+    trace.initial_request = RequestTrace(dict(request_arguments))
+
     for call_number in range(1, max_api_calls + 1):
         started = perf_counter()
         try:
-            response = client.responses.create(
-                model=model, tools=tools, input=input_list
-            )
+            # TODO: I don't like that this works in a loop only because we
+            # change input_list, hidden in these arguments.
+            response = client.responses.create(**request_arguments)
         except Exception:
             trace.calls.append(
                 CallTrace(model=model, elapsed_seconds=perf_counter() - started)
@@ -174,6 +275,14 @@ def run(
                 ),
                 total_tokens=usage.total_tokens if usage else None,
                 output=output,
+                tool_calls=[
+                    ToolCallTrace(
+                        call_id=item.call_id,
+                        name=item.name,
+                        arguments=item.arguments,
+                    )
+                    for item in function_calls
+                ],
             )
         )
 
@@ -195,12 +304,13 @@ def run(
         if call_number == max_api_calls:
             raise RuntimeError(f"API call limit ({max_api_calls}) reached")
 
-        for item in function_calls:
+        for item, tool_trace in zip(function_calls, trace.calls[-1].tool_calls):
             tool_result = registry.dispatch(
                 name=item.name,
                 arguments_json=item.arguments,
                 vault_path=vault_path,
             )
+            tool_trace.output = tool_result
             # noinspection bad-argument-type
             input_list.append(
                 {
@@ -214,10 +324,11 @@ def run(
 
 
 def main() -> None:
-    """Print the example vault answer, call outputs, and API metrics.
+    """Print the example vault answer, initial prompt, call outputs, and metrics.
 
     Environment variables are loaded from dotenv before creating the client.
     Metrics are printed even if the run fails; unknown usage is shown explicitly.
+    The initial prompt is printed on one line before API call traces.
 
     Raises:
         openai.OpenAIError: If client creation or an API invocation fails.
@@ -233,6 +344,8 @@ def main() -> None:
             print("Final output:")
             print(output)
         finally:
+            if trace.initial_request is not None:
+                print(f"Initial request: {trace.initial_request}")
             for number, call in enumerate(trace.calls, start=1):
                 print(f"API call {number}: {call}")
             total = trace.total_cost()

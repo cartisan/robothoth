@@ -79,6 +79,46 @@ def test_provider_uses_registered_declarations() -> None:
     assert provider.tools == registry.declarations()
 
 
+def test_request_trace_snapshots_arguments_and_formats_all_messages() -> None:
+    """Copy all request data and print every message's text on one line."""
+    arguments: dict[str, object] = {
+        "model": "hidden-model",
+        "tools": [{"name": "hidden-tool"}],
+        "input": [
+            {"role": "developer", "content": "first\nline\tquoted \"text\""},
+            {"role": "user", "content": "Question"},
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                    {"type": "output_text", "text": "Earlier "},
+                    {"type": "input_image", "image_url": "hidden-image"},
+                    {"type": "input_text", "text": "answer"},
+                ],
+            },
+            {"role": "user", "content": "Follow-up"},
+            {"type": "function_call", "name": "hidden-call"},
+        ],
+    }
+    expected = deepcopy(arguments)
+    request = provider.RequestTrace(arguments)
+    cast(list[dict[str, object]], arguments["input"])[0]["content"] = "changed"
+    cast(list[dict[str, object]], arguments["tools"])[0]["name"] = "changed"
+    assert request.arguments == expected
+    assert str(request) == (
+        'developer: "first\\nline\\tquoted \\"text\\"" | user: "Question" | '
+        'assistant: "Earlier answer" | user: "Follow-up"'
+    )
+    assert len(str(request).splitlines()) == 1
+
+
+def test_request_trace_formats_string_input() -> None:
+    """Display a shorthand API input as user text without other arguments."""
+    assert str(provider.RequestTrace({"input": "Hello\nworld", "model": "hidden"})) == (
+        'user: "Hello\\nworld"'
+    )
+
+
 @pytest.mark.parametrize(
     ("total_tokens", "output", "expected_cost", "expected_output"),
     [
@@ -89,8 +129,9 @@ def test_provider_uses_registered_declarations() -> None:
             None,
             "list_notes({})\nread_note({})",
             "unknown",
-            "list_notes({})\nread_note({})",
+            "list_notes({}) read_note({})",
         ),
+        (120, "first\r\nsecond\rthird", "120 tokens", "first second third"),
     ],
 )
 def test_call_trace_string(
@@ -112,6 +153,7 @@ def test_call_trace_string(
         f"Total cost: {expected_cost}\t"
         f"Output: {expected_output}"
     )
+    assert call.output == output
 
 
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -152,6 +194,35 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
     assert trace.total_cost() == 120
     assert trace.total_latency() == 2.5
+    assert trace.initial_request is not None
+    assert trace.initial_request.arguments == {
+        "model": "requested-model",
+        "tools": provider.tools,
+        "input": [
+            {"role": "developer", "content": provider.SYSTEM_PROMPT},
+            {"role": "user", "content": "Question"},
+        ],
+    }
+
+
+def test_tool_trace_string_and_independent_lists() -> None:
+    """Flatten displayed tool results and distinguish empty from missing output."""
+    call = provider.CallTrace(model="model", elapsed_seconds=0)
+    other = provider.CallTrace(model="model", elapsed_seconds=0)
+    call.tool_calls.extend(
+        [
+            provider.ToolCallTrace("a", "read_note", "{}", "first\nsecond"),
+            provider.ToolCallTrace("b", "read_note", "{}", ""),
+            provider.ToolCallTrace("c", "read_note", "{}"),
+        ]
+    )
+    assert other.tool_calls == []
+    assert str(call).split("\n", 1)[1] == (
+        "\tName: read_note\tResult: first second\n"
+        "\tName: read_note\tResult: \n"
+        "\tName: read_note\tResult: (not executed)"
+    )
+    assert call.tool_calls[0].output == "first\nsecond"
 
 
 def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -185,7 +256,8 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
 
     client = MagicMock()
     client.responses.create.side_effect = create
-    dispatcher = MagicMock(return_value='{"ok": true, "result": []}')
+    tool_results = ['{"ok": true, "result": []}', "note\ncontents", ""]
+    dispatcher = MagicMock(side_effect=tool_results)
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     ticks = iter([1.0, 2.0, 50.0, 52.0, 90.0, 93.0])
     monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
@@ -197,6 +269,8 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     )
 
     assert len(requests) == 3
+    assert trace.initial_request is not None
+    assert trace.initial_request.arguments == requests[0]
     initial = cast(list[dict[str, object]], requests[0]["input"])
     assert initial == [
         {"role": "developer", "content": provider.SYSTEM_PROMPT},
@@ -228,6 +302,21 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
         "list_notes({})",
         "Found it",
     ]
+    assert trace.calls[0].tool_calls == [
+        provider.ToolCallTrace(
+            "a", "list_notes", '{ "path": null }', tool_results[0]
+        ),
+        provider.ToolCallTrace(
+            "b", "read_note", '{"notepath": "Beta.md"}', tool_results[1]
+        ),
+    ]
+    assert trace.calls[1].tool_calls == [
+        provider.ToolCallTrace("c", "list_notes", "{}", tool_results[2])
+    ]
+    assert trace.calls[2].tool_calls == []
+    assert [
+        item["output"] for item in third if item.get("type") == "function_call_output"
+    ] == tool_results
 
 
 def test_tool_errors_are_sent_to_model() -> None:
@@ -251,6 +340,11 @@ def test_tool_errors_are_sent_to_model() -> None:
     assert history[-1]["call_id"] == "bad"
     assert result["error"]["code"] == "invalid_arguments"
     assert trace.calls[0].output == "list_notes({)"
+    assert trace.calls[0].tool_calls == [
+        provider.ToolCallTrace(
+            "bad", "list_notes", "{", cast(str, history[-1]["output"])
+        )
+    ]
 
 
 def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -268,6 +362,8 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
     assert dispatcher.call_count == 1
     assert len(trace.calls) == 2
     assert trace.calls[-1].output == "list_notes({})"
+    assert trace.calls[0].tool_calls[0].output == "{}"
+    assert trace.calls[-1].tool_calls[0].output is None
 
 
 @pytest.mark.parametrize("limit", [0, -1])
@@ -285,6 +381,7 @@ def test_invalid_limit_makes_no_requests(limit: int) -> None:
         )
     client.responses.create.assert_not_called()
     assert trace.calls == []
+    assert trace.initial_request is None
 
 
 @pytest.mark.parametrize("status", ["failed", "incomplete", "cancelled"])
@@ -334,6 +431,9 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
         )
     dispatcher.assert_not_called()
     assert trace.calls[0].output == "list_notes({})"
+    assert trace.calls[0].tool_calls == [
+        provider.ToolCallTrace("valid", "list_notes", "{}")
+    ]
 
 
 def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -341,7 +441,7 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     client = MagicMock()
     error = APIConnectionError(request=httpx.Request("POST", "https://example.test"))
     client.responses.create.side_effect = [make_response(tool_call("a")), error]
-    monkeypatch.setattr(provider.registry, "dispatch", MagicMock())
+    monkeypatch.setattr(provider.registry, "dispatch", MagicMock(return_value="result"))
     ticks = iter([1.0, 2.0, 10.0, 13.0])
     monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = provider.Trace()
@@ -356,6 +456,61 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     assert trace.calls[1].output is None
     assert trace.total_cost() is None
     assert trace.total_latency() == 4.0
+    assert trace.calls[0].tool_calls[0].output == "result"
+    assert trace.calls[1].tool_calls == []
+    assert trace.initial_request is not None
+    assert trace.initial_request.arguments["input"] == [
+        {"role": "developer", "content": provider.SYSTEM_PROMPT},
+        {"role": "user", "content": "Find"},
+    ]
+
+
+def test_reused_trace_replaces_initial_request() -> None:
+    """Replace the prompt for valid runs and preserve it for invalid limits."""
+    client = MagicMock()
+    client.responses.create.return_value = make_response(text="Done")
+    trace = provider.Trace()
+    provider.run(client, user_prompt="First", vault_path="vault", trace=trace)
+    first = trace.initial_request
+    provider.run(client, user_prompt="Second", vault_path="vault", trace=trace)
+    assert trace.initial_request is not None
+    assert trace.initial_request is not first
+    assert 'user: "Second"' in str(trace.initial_request)
+    assert len(trace.calls) == 2
+    current = trace.initial_request
+    with pytest.raises(ValueError):
+        provider.run(
+            client, user_prompt="Invalid", vault_path="vault", trace=trace,
+            max_api_calls=0,
+        )
+    assert trace.initial_request is current
+    assert len(trace.calls) == 2
+
+
+def test_dispatch_failure_retains_earlier_results(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep completed results and all requests when a later dispatch raises."""
+    client = MagicMock()
+    client.responses.create.return_value = make_response(
+        tool_call("a"), tool_call("b"), tool_call("c")
+    )
+    error = RuntimeError("dispatch failed")
+    dispatcher = MagicMock(side_effect=["saved result", error])
+    monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
+    trace = provider.Trace()
+
+    with pytest.raises(RuntimeError, match="dispatch failed") as raised:
+        provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+
+    assert raised.value is error
+    assert trace.calls[0].tool_calls == [
+        provider.ToolCallTrace("a", "list_notes", "{}", "saved result"),
+        provider.ToolCallTrace("b", "list_notes", "{}"),
+        provider.ToolCallTrace("c", "list_notes", "{}"),
+    ]
+    assert dispatcher.call_count == 2
+    client.responses.create.assert_called_once()
 
 
 def test_missing_usage_and_independent_traces() -> None:
@@ -371,6 +526,7 @@ def test_missing_usage_and_independent_traces() -> None:
     assert trace.calls[0].input_tokens is None
     assert trace.calls[0].output == "Done"
     assert other.calls == []
+    assert other.initial_request is None
     assert other.total_cost() == 0
 
 
@@ -399,6 +555,15 @@ def test_main_prints_metrics_and_closes_client(
     dotenv.assert_called_once_with()
     factory.return_value.__exit__.assert_called_once()
     output = capsys.readouterr().out
+    initial_line = next(
+        line for line in output.splitlines() if line.startswith("Initial request:")
+    )
+    assert initial_line == (
+        "Initial request: "
+        f"developer: {json.dumps(provider.SYSTEM_PROMPT, ensure_ascii=False)} | "
+        f"user: {json.dumps(provider.user_prompt, ensure_ascii=False)}"
+    )
+    assert output.index("Initial request:") < output.index("API call 1:")
     assert "API call 1:" in output
     assert "Model:" in output
     assert "Latency:" in output
