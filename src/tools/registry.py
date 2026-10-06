@@ -6,7 +6,9 @@ import logging
 import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, get_args, get_origin, get_type_hints
+from typing import get_args, get_origin, get_type_hints
+
+from openai.types.responses import ToolParam
 
 from src.tools.get_backlinks import get_backlinks
 from src.tools.get_outgoing_links import get_outgoing_links
@@ -144,7 +146,7 @@ class Registry:
                 raise ValueError(f"Duplicate tool name: {name}")
             self._tools[name] = spec
 
-    def declarations(self) -> list[dict[str, Any]]:
+    def openai_tool_declarations(self) -> list[ToolParam]:
         """Return strict OpenAI declarations for all registered tools.
 
         Every public argument is required, including nullable arguments. Schemas

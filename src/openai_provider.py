@@ -3,18 +3,13 @@ from typing import cast
 
 from dotenv import load_dotenv
 from openai import OpenAI
-from openai.types.responses import ResponseInputParam, ToolParam
-from openai.types.responses.response_create_params import (
-    ResponseCreateParamsNonStreaming,
-)
+from openai.types.responses import ResponseInputParam
 from openai.types.responses.response_input_param import ResponseInputItemParam
 
 from src.tools.registry import registry
 from src.tracing import Trace
 
 VAULT_HOME = "/Users/leonid/code/robothoth/tests/test_vault"
-
-tools: list[ToolParam] = cast(list[ToolParam], registry.declarations())
 
 SYSTEM_PROMPT = """You are an assistant that helps navigate an Obsidian note vault.
 The vault is located under a vault path on the local machine,
@@ -23,8 +18,6 @@ You only need to operate on file paths relative to that vault path.
 
 Help the user with the following query:
 """
-
-user_prompt = "Help me locate the file called 'Agentic Software Engineering Factory'."
 
 
 def run(
@@ -38,24 +31,17 @@ def run(
 ) -> str:
     """Return final assistant text after resolving requested vault tool calls.
 
-    All response output is retained in the conversation, and each function
-    result is paired with its call ID. Text accompanying function calls is
-    intermediate; completion requires text without function calls. Tool error
-    envelopes are returned to the model for resolution. Metrics are appended
-    to the supplied trace and remain available if the run fails. Each call trace
-    retains requested functions, including their unmodified argument JSON, or
-    response text when no functions are requested. Output is retained even for
-    responses rejected by validation or the call limit. Structured tool records
-    on the requesting API trace retain call IDs, names, original arguments, and
-    exact returned envelopes. Results remain available if a later call fails;
-    requests without a returned result have None as their output.
-    The initial request snapshots every supplied API argument before invocation,
-    including all prompt messages. A valid run replaces this snapshot, while
-    existing call traces are appended to; an invalid call limit leaves it intact.
+    Tools operate within ``vault_path``; their results, including error envelopes,
+    are returned to the model with conversation history. Text accompanying tool
+    calls is intermediate; completion requires text without tool calls.
 
-    The positive call limit counts API invocations, including the final text
-    request, but not internal SDK retries. Tools requested by the last allowed
-    response are executed and traced before the call-limit error is raised.
+    The supplied trace snapshots the initial request and appends API metrics and
+    tool results, retaining them on failure. Valid runs replace the initial
+    snapshot; invalid call limits leave the trace unchanged.
+
+    ``max_api_calls`` counts API invocations, including the final text request,
+    but excludes SDK retries. Tools from the last allowed response are executed
+    and traced before a call-limit error is raised.
 
     Raises:
         ValueError: If ``max_api_calls`` is not positive.
@@ -68,23 +54,21 @@ def run(
         raise ValueError("max_api_calls must be positive")
 
     # noinspection bad-assignment
-    input_list: ResponseInputParam = [
+    conversation: ResponseInputParam = [
         {"role": "developer", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
     ]
-    request_arguments: ResponseCreateParamsNonStreaming = {
-        "model": model,
-        "tools": tools,
-        "input": input_list,
-    }
-    trace.record_initial_request(dict(request_arguments))
+    tools = registry.openai_tool_declarations()
+    trace.record_initial_request(
+        {"model": model, "tools": tools, "input": conversation}
+    )
 
     for call_number in range(1, max_api_calls + 1):
-        # TODO: I don't like that this works in a loop only because we
-        #  change input_list, hidden in these arguments.
         started = perf_counter()
         try:
-            response = client.responses.create(**request_arguments)
+            response = client.responses.create(
+                model=model, tools=tools, input=conversation
+            )
         except Exception:
             trace.record_failure(
                 model=model, elapsed_seconds=perf_counter() - started
@@ -110,7 +94,7 @@ def run(
             return response.output_text
 
         # Add API response to conversation history of model calls
-        input_list.extend(
+        conversation.extend(
             cast(ResponseInputItemParam, item.to_dict()) for item in response.output
         )
 
@@ -124,7 +108,7 @@ def run(
             )
             call_trace.record_tool_result(index, tool_result)
             # noinspection bad-argument-type
-            input_list.append(
+            conversation.append(
                 {
                     "type": "function_call_output",
                     "call_id": item.call_id,
@@ -147,6 +131,10 @@ def main() -> None:
         RuntimeError: If the run cannot produce final text within its call limit.
     """
     load_dotenv()
+    user_prompt = (
+        "Help me locate the file called 'Agentic Software Engineering Factory'."
+    )
+
     trace = Trace()
     with OpenAI() as client:
         try:
@@ -156,6 +144,7 @@ def main() -> None:
             print("Final output:")
             print(output)
         finally:
+            print()
             print(trace)
 
 

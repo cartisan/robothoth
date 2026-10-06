@@ -77,13 +77,15 @@ def tool_call(call_id: str, arguments: str = "{}") -> ResponseFunctionToolCall:
 
 def test_provider_uses_registered_declarations() -> None:
     """Advertise every registered vault function with its derived schema."""
-    assert provider.tools == registry.declarations()
-
-
-
-
-
-
+    client = MagicMock()
+    client.responses.create.return_value = make_response(text="Done")
+    provider.run(
+        client, user_prompt="Question", vault_path="vault", trace=tracing.Trace()
+    )
+    assert (
+        client.responses.create.call_args.kwargs["tools"]
+        == registry.openai_tool_declarations()
+    )
 
 
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -127,14 +129,12 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     assert trace.initial_request is not None
     assert trace.initial_request.arguments == {
         "model": "requested-model",
-        "tools": provider.tools,
+        "tools": registry.openai_tool_declarations(),
         "input": [
             {"role": "developer", "content": provider.SYSTEM_PROMPT},
             {"role": "user", "content": "Question"},
         ],
     }
-
-
 
 
 def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -470,10 +470,13 @@ def test_main_prints_metrics_and_closes_client(
     initial_line = next(
         line for line in output.splitlines() if line.startswith("Initial request:")
     )
+    expected_prompt = (
+        "Help me locate the file called 'Agentic Software Engineering Factory'."
+    )
     assert initial_line == (
         "Initial request: "
         f"developer: {json.dumps(provider.SYSTEM_PROMPT, ensure_ascii=False)} | "
-        f"user: {json.dumps(provider.user_prompt, ensure_ascii=False)}"
+        f"user: {json.dumps(expected_prompt, ensure_ascii=False)}"
     )
     assert output.index("Initial request:") < output.index("API call 1:")
     assert "API call 1:" in output
