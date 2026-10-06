@@ -178,7 +178,7 @@ class Trace:
         """
         self.initial_request = RequestTrace(arguments)
 
-    def record_failure(self, *, model: str, elapsed_seconds: float) -> CallTrace:
+    def record_failure(self, model: str, elapsed_seconds: float) -> CallTrace:
         """Append and return a failed invocation trace with unknown usage.
 
         The caller supplies the requested model and API elapsed time. No response
@@ -189,7 +189,7 @@ class Trace:
         return call
 
     def record_response(
-        self, response: Response, *, elapsed_seconds: float
+        self, response: Response, elapsed_seconds: float
     ) -> CallTrace:
         """Append and return a trace of response metrics and requested tools.
 

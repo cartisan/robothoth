@@ -259,8 +259,8 @@ def test_tool_errors_are_sent_to_model() -> None:
     ]
 
 
-def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stop at the configured API cap without dispatching the last tools."""
+def test_call_limit_retains_last_tool_results(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Execute and trace the last tools without exceeding the API call cap."""
     client = MagicMock()
     client.responses.create.return_value = make_response(tool_call("again"))
     dispatcher = MagicMock(return_value="{}")
@@ -271,11 +271,11 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
             client, user_prompt="Find", vault_path="vault", trace=trace, max_api_calls=2
         )
     assert client.responses.create.call_count == 2
-    assert dispatcher.call_count == 1
+    assert dispatcher.call_count == 2
     assert len(trace.calls) == 2
     assert trace.calls[-1].output == "list_notes({})"
     assert trace.calls[0].tool_calls[0].output == "{}"
-    assert trace.calls[-1].tool_calls[0].output is None
+    assert trace.calls[-1].tool_calls[0].output == "{}"
 
 
 @pytest.mark.parametrize("limit", [0, -1])

@@ -55,7 +55,7 @@ def run(
 
     The positive call limit counts API invocations, including the final text
     request, but not internal SDK retries. Tools requested by the last allowed
-    response are not executed because no subsequent request can consume them.
+    response are executed and traced before the call-limit error is raised.
 
     Raises:
         ValueError: If ``max_api_calls`` is not positive.
@@ -90,8 +90,9 @@ def run(
                 model=model, elapsed_seconds=perf_counter() - started
             )
             raise
-        elapsed = perf_counter() - started
-        call_trace = trace.record_response(response, elapsed_seconds=elapsed)
+        call_trace = trace.record_response(
+            response, elapsed_seconds=perf_counter() - started
+        )
         function_calls = [
             item for item in response.output if item.type == "function_call"
         ]
@@ -101,19 +102,20 @@ def run(
         for item in response.output:
             if item.type not in {"message", "reasoning", "function_call"}:
                 raise RuntimeError(f"Unsupported response output type: {item.type}")
-
-        input_list.extend(
-            cast(ResponseInputItemParam, item.to_dict()) for item in response.output
-        )
         if not function_calls:
             if not response.output_text:
                 raise RuntimeError(
                     "API response contains neither text nor function calls"
                 )
             return response.output_text
-        if call_number == max_api_calls:
-            raise RuntimeError(f"API call limit ({max_api_calls}) reached")
 
+        # Add API response to conversation history of model calls
+        input_list.extend(
+            cast(ResponseInputItemParam, item.to_dict()) for item in response.output
+        )
+
+        # execute the requested tools, record them in trace and add them to
+        # conversation history for model
         for index, item in enumerate(function_calls):
             tool_result = registry.dispatch(
                 name=item.name,
@@ -130,7 +132,7 @@ def run(
                 }
             )
 
-    raise AssertionError("Positive API call limit exhausted without a result or error")
+    raise RuntimeError(f"API call limit ({max_api_calls}) reached")
 
 
 def main() -> None:
