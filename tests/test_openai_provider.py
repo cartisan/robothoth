@@ -17,6 +17,7 @@ from openai.types.responses import (
 from openai.types.responses.response_output_item import ResponseOutputItem
 
 import src.openai_provider as provider
+import src.tracing as tracing
 from src.tools.registry import registry
 
 
@@ -79,81 +80,10 @@ def test_provider_uses_registered_declarations() -> None:
     assert provider.tools == registry.declarations()
 
 
-def test_request_trace_snapshots_arguments_and_formats_all_messages() -> None:
-    """Copy all request data and print every message's text on one line."""
-    arguments: dict[str, object] = {
-        "model": "hidden-model",
-        "tools": [{"name": "hidden-tool"}],
-        "input": [
-            {"role": "developer", "content": "first\nline\tquoted \"text\""},
-            {"role": "user", "content": "Question"},
-            {
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                    {"type": "output_text", "text": "Earlier "},
-                    {"type": "input_image", "image_url": "hidden-image"},
-                    {"type": "input_text", "text": "answer"},
-                ],
-            },
-            {"role": "user", "content": "Follow-up"},
-            {"type": "function_call", "name": "hidden-call"},
-        ],
-    }
-    expected = deepcopy(arguments)
-    request = provider.RequestTrace(arguments)
-    cast(list[dict[str, object]], arguments["input"])[0]["content"] = "changed"
-    cast(list[dict[str, object]], arguments["tools"])[0]["name"] = "changed"
-    assert request.arguments == expected
-    assert str(request) == (
-        'developer: "first\\nline\\tquoted \\"text\\"" | user: "Question" | '
-        'assistant: "Earlier answer" | user: "Follow-up"'
-    )
-    assert len(str(request).splitlines()) == 1
 
 
-def test_request_trace_formats_string_input() -> None:
-    """Display a shorthand API input as user text without other arguments."""
-    assert str(provider.RequestTrace({"input": "Hello\nworld", "model": "hidden"})) == (
-        'user: "Hello\\nworld"'
-    )
 
 
-@pytest.mark.parametrize(
-    ("total_tokens", "output", "expected_cost", "expected_output"),
-    [
-        (120, "Done", "120 tokens", "Done"),
-        (0, "", "0 tokens", ""),
-        (None, None, "unknown", "(no output)"),
-        (
-            None,
-            "list_notes({})\nread_note({})",
-            "unknown",
-            "list_notes({}) read_note({})",
-        ),
-        (120, "first\r\nsecond\rthird", "120 tokens", "first second third"),
-    ],
-)
-def test_call_trace_string(
-    total_tokens: int | None,
-    output: str | None,
-    expected_cost: str,
-    expected_output: str,
-) -> None:
-    """Display token cost, rounded latency, and available output explicitly."""
-    call = provider.CallTrace(
-        model="test-model",
-        elapsed_seconds=1.23456,
-        total_tokens=total_tokens,
-        output=output,
-    )
-    assert str(call) == (
-        "Model: test-model\t"
-        "Latency: 1.235s\t"
-        f"Total cost: {expected_cost}\t"
-        f"Output: {expected_output}"
-    )
-    assert call.output == output
 
 
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -161,8 +91,8 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done")
     ticks = iter([10.0, 12.5])
-    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
-    trace = provider.Trace()
+    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    trace = tracing.Trace()
 
     assert (
         provider.run(
@@ -179,7 +109,7 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     client.responses.create.assert_called_once()
     assert client.responses.create.call_args.kwargs["model"] == "requested-model"
     assert trace.calls == [
-        provider.CallTrace(
+        tracing.CallTrace(
             model="returned-model",
             response_id="response",
             elapsed_seconds=2.5,
@@ -205,24 +135,6 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     }
 
 
-def test_tool_trace_string_and_independent_lists() -> None:
-    """Flatten displayed tool results and distinguish empty from missing output."""
-    call = provider.CallTrace(model="model", elapsed_seconds=0)
-    other = provider.CallTrace(model="model", elapsed_seconds=0)
-    call.tool_calls.extend(
-        [
-            provider.ToolCallTrace("a", "read_note", "{}", "first\nsecond"),
-            provider.ToolCallTrace("b", "read_note", "{}", ""),
-            provider.ToolCallTrace("c", "read_note", "{}"),
-        ]
-    )
-    assert other.tool_calls == []
-    assert str(call).split("\n", 1)[1] == (
-        "\tName: read_note\tResult: first second\n"
-        "\tName: read_note\tResult: \n"
-        "\tName: read_note\tResult: (not executed)"
-    )
-    assert call.tool_calls[0].output == "first\nsecond"
 
 
 def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -260,8 +172,8 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     dispatcher = MagicMock(side_effect=tool_results)
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     ticks = iter([1.0, 2.0, 50.0, 52.0, 90.0, 93.0])
-    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
-    trace = provider.Trace()
+    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    trace = tracing.Trace()
 
     assert (
         provider.run(client, user_prompt="Find it", vault_path="vault", trace=trace)
@@ -303,15 +215,15 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
         "Found it",
     ]
     assert trace.calls[0].tool_calls == [
-        provider.ToolCallTrace(
+        tracing.ToolCallTrace(
             "a", "list_notes", '{ "path": null }', tool_results[0]
         ),
-        provider.ToolCallTrace(
+        tracing.ToolCallTrace(
             "b", "read_note", '{"notepath": "Beta.md"}', tool_results[1]
         ),
     ]
     assert trace.calls[1].tool_calls == [
-        provider.ToolCallTrace("c", "list_notes", "{}", tool_results[2])
+        tracing.ToolCallTrace("c", "list_notes", "{}", tool_results[2])
     ]
     assert trace.calls[2].tool_calls == []
     assert [
@@ -333,7 +245,7 @@ def test_tool_errors_are_sent_to_model() -> None:
 
     client = MagicMock()
     client.responses.create.side_effect = create
-    trace = provider.Trace()
+    trace = tracing.Trace()
     provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     history = cast(list[dict[str, object]], requests[1]["input"])
     result = json.loads(cast(str, history[-1]["output"]))
@@ -341,7 +253,7 @@ def test_tool_errors_are_sent_to_model() -> None:
     assert result["error"]["code"] == "invalid_arguments"
     assert trace.calls[0].output == "list_notes({)"
     assert trace.calls[0].tool_calls == [
-        provider.ToolCallTrace(
+        tracing.ToolCallTrace(
             "bad", "list_notes", "{", cast(str, history[-1]["output"])
         )
     ]
@@ -353,7 +265,7 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
     client.responses.create.return_value = make_response(tool_call("again"))
     dispatcher = MagicMock(return_value="{}")
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
-    trace = provider.Trace()
+    trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="call limit \\(2\\) reached"):
         provider.run(
             client, user_prompt="Find", vault_path="vault", trace=trace, max_api_calls=2
@@ -370,7 +282,7 @@ def test_call_limit_stops_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> No
 def test_invalid_limit_makes_no_requests(limit: int) -> None:
     """Reject nonpositive limits before invoking the API."""
     client = MagicMock()
-    trace = provider.Trace()
+    trace = tracing.Trace()
     with pytest.raises(ValueError, match="positive"):
         provider.run(
             client,
@@ -389,7 +301,7 @@ def test_noncompleted_responses_are_errors(status: str) -> None:
     """Reject noncompleted responses even when they contain partial text."""
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Partial", status=status)
-    trace = provider.Trace()
+    trace = tracing.Trace()
     with pytest.raises(RuntimeError, match=status):
         provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert trace.total_cost() == 120
@@ -401,7 +313,7 @@ def test_empty_response_is_error() -> None:
     """Reject a completed response without text or function calls."""
     client = MagicMock()
     client.responses.create.return_value = make_response()
-    trace = provider.Trace()
+    trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="neither text nor function calls"):
         provider.run(
             client, user_prompt="Find", vault_path="vault", trace=trace
@@ -424,7 +336,7 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     dispatcher = MagicMock()
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
-    trace = provider.Trace()
+    trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="Unsupported.*custom_tool_call"):
         provider.run(
             client, user_prompt="Find", vault_path="vault", trace=trace
@@ -432,7 +344,7 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
     dispatcher.assert_not_called()
     assert trace.calls[0].output == "list_notes({})"
     assert trace.calls[0].tool_calls == [
-        provider.ToolCallTrace("valid", "list_notes", "{}")
+        tracing.ToolCallTrace("valid", "list_notes", "{}")
     ]
 
 
@@ -443,8 +355,8 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     client.responses.create.side_effect = [make_response(tool_call("a")), error]
     monkeypatch.setattr(provider.registry, "dispatch", MagicMock(return_value="result"))
     ticks = iter([1.0, 2.0, 10.0, 13.0])
-    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
-    trace = provider.Trace()
+    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    trace = tracing.Trace()
     with pytest.raises(APIConnectionError) as raised:
         provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert raised.value is error
@@ -469,7 +381,7 @@ def test_reused_trace_replaces_initial_request() -> None:
     """Replace the prompt for valid runs and preserve it for invalid limits."""
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done")
-    trace = provider.Trace()
+    trace = tracing.Trace()
     provider.run(client, user_prompt="First", vault_path="vault", trace=trace)
     first = trace.initial_request
     provider.run(client, user_prompt="Second", vault_path="vault", trace=trace)
@@ -498,16 +410,16 @@ def test_dispatch_failure_retains_earlier_results(
     error = RuntimeError("dispatch failed")
     dispatcher = MagicMock(side_effect=["saved result", error])
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
-    trace = provider.Trace()
+    trace = tracing.Trace()
 
     with pytest.raises(RuntimeError, match="dispatch failed") as raised:
         provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
 
     assert raised.value is error
     assert trace.calls[0].tool_calls == [
-        provider.ToolCallTrace("a", "list_notes", "{}", "saved result"),
-        provider.ToolCallTrace("b", "list_notes", "{}"),
-        provider.ToolCallTrace("c", "list_notes", "{}"),
+        tracing.ToolCallTrace("a", "list_notes", "{}", "saved result"),
+        tracing.ToolCallTrace("b", "list_notes", "{}"),
+        tracing.ToolCallTrace("c", "list_notes", "{}"),
     ]
     assert dispatcher.call_count == 2
     client.responses.create.assert_called_once()
@@ -515,8 +427,8 @@ def test_dispatch_failure_retains_earlier_results(
 
 def test_missing_usage_and_independent_traces() -> None:
     """Keep missing usage unknown and avoid sharing call lists between traces."""
-    trace = provider.Trace()
-    other = provider.Trace()
+    trace = tracing.Trace()
+    other = tracing.Trace()
     assert trace.total_cost() == 0
     assert trace.total_latency() == 0.0
     client = MagicMock()
