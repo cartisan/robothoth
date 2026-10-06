@@ -91,7 +91,7 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done")
     ticks = iter([10.0, 12.5])
-    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = tracing.Trace()
 
     assert (
@@ -172,7 +172,7 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     dispatcher = MagicMock(side_effect=tool_results)
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     ticks = iter([1.0, 2.0, 50.0, 52.0, 90.0, 93.0])
-    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = tracing.Trace()
 
     assert (
@@ -355,7 +355,7 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     client.responses.create.side_effect = [make_response(tool_call("a")), error]
     monkeypatch.setattr(provider.registry, "dispatch", MagicMock(return_value="result"))
     ticks = iter([1.0, 2.0, 10.0, 13.0])
-    monkeypatch.setattr(tracing, "perf_counter", lambda: next(ticks))
+    monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = tracing.Trace()
     with pytest.raises(APIConnectionError) as raised:
         provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)

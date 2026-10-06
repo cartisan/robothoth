@@ -3,13 +3,8 @@
 import json
 from copy import deepcopy
 from dataclasses import dataclass, field
-from time import perf_counter
 
-from openai import OpenAI
 from openai.types.responses import Response
-from openai.types.responses.response_create_params import (
-    ResponseCreateParamsNonStreaming,
-)
 
 
 @dataclass(frozen=True)
@@ -183,31 +178,25 @@ class Trace:
         """
         self.initial_request = RequestTrace(arguments)
 
-    def invoke(
-        self, client: OpenAI, arguments: ResponseCreateParamsNonStreaming
-    ) -> tuple[Response, CallTrace]:
-        """Return an API response and its recorded trace, including tool requests.
+    def record_failure(self, *, model: str, elapsed_seconds: float) -> CallTrace:
+        """Append and return a failed invocation trace with unknown usage.
 
-        Elapsed time includes SDK retries but excludes tracing and tool execution.
-        Response output and usage are retained before caller validation. Failed
-        invocations retain elapsed time and the requested model with unknown usage.
-
-        Raises:
-            openai.OpenAIError: If the API invocation fails; other client exceptions
-                also propagate after a failed invocation trace is recorded.
+        The caller supplies the requested model and API elapsed time. No response
+        ID or output is recorded because the invocation returned no response.
         """
-        started = perf_counter()
-        try:
-            response = client.responses.create(**arguments)
-        except Exception:
-            self.calls.append(
-                CallTrace(
-                    model=str(arguments.get("model", "")),
-                    elapsed_seconds=perf_counter() - started,
-                )
-            )
-            raise
-        elapsed = perf_counter() - started
+        call = CallTrace(model=model, elapsed_seconds=elapsed_seconds)
+        self.calls.append(call)
+        return call
+
+    def record_response(
+        self, response: Response, *, elapsed_seconds: float
+    ) -> CallTrace:
+        """Append and return a trace of response metrics and requested tools.
+
+        The caller supplies API elapsed time. Output, usage, and tool requests
+        are retained regardless of response status; response validation remains
+        the caller's responsibility. Missing usage stays unknown.
+        """
         function_calls = [
             item for item in response.output if item.type == "function_call"
         ]
@@ -220,7 +209,7 @@ class Trace:
         call = CallTrace(
             model=response.model,
             response_id=response.id,
-            elapsed_seconds=elapsed,
+            elapsed_seconds=elapsed_seconds,
             input_tokens=usage.input_tokens if usage else None,
             output_tokens=usage.output_tokens if usage else None,
             cached_tokens=usage.input_tokens_details.cached_tokens if usage else None,
@@ -240,7 +229,7 @@ class Trace:
             ],
         )
         self.calls.append(call)
-        return response, call
+        return call
 
     def __str__(self) -> str:
         """Return the initial prompt, API call traces, and aggregate metrics.

@@ -1,3 +1,4 @@
+from time import perf_counter
 from typing import cast
 
 from dotenv import load_dotenv
@@ -80,8 +81,17 @@ def run(
 
     for call_number in range(1, max_api_calls + 1):
         # TODO: I don't like that this works in a loop only because we
-        # change input_list, hidden in these arguments.
-        response, call_trace = trace.invoke(client, request_arguments)
+        #  change input_list, hidden in these arguments.
+        started = perf_counter()
+        try:
+            response = client.responses.create(**request_arguments)
+        except Exception:
+            trace.record_failure(
+                model=model, elapsed_seconds=perf_counter() - started
+            )
+            raise
+        elapsed = perf_counter() - started
+        call_trace = trace.record_response(response, elapsed_seconds=elapsed)
         function_calls = [
             item for item in response.output if item.type == "function_call"
         ]

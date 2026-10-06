@@ -2,8 +2,45 @@ from copy import deepcopy
 from typing import cast
 
 import pytest
+from openai.types.responses import Response, ResponseFunctionToolCall
 
 import src.tracing as tracing
+
+
+def test_record_response_without_a_client() -> None:
+    """Retain tool requests and missing usage before response validation."""
+    response = Response.model_construct(
+        id="response", model="returned-model", status="incomplete", usage=None,
+        output=[
+            ResponseFunctionToolCall(
+                type="function_call", name="list_notes", call_id="a",
+                arguments='{ "path": null }',
+            )
+        ],
+    )
+    trace = tracing.Trace()
+    call = trace.record_response(response, elapsed_seconds=2.5)
+    assert trace.calls == [call]
+    assert call.response_id == "response"
+    assert call.model == "returned-model"
+    assert call.elapsed_seconds == 2.5
+    assert call.total_tokens is None
+    assert call.output == 'list_notes({ "path": null })'
+    assert call.tool_calls == [
+        tracing.ToolCallTrace("a", "list_notes", '{ "path": null }')
+    ]
+    call.record_tool_result(0, "result")
+    assert trace.calls[0].tool_calls[0].output == "result"
+
+
+def test_record_failure_without_a_client() -> None:
+    """Record supplied failure metrics without a response or client."""
+    trace = tracing.Trace()
+    call = trace.record_failure(model="requested-model", elapsed_seconds=3)
+    assert trace.calls == [call]
+    assert call == tracing.CallTrace(model="requested-model", elapsed_seconds=3)
+    assert trace.total_cost() is None
+    assert trace.total_latency() == 3
 
 
 def test_request_trace_snapshots_arguments_and_formats_all_messages() -> None:
