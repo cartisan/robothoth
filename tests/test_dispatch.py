@@ -153,22 +153,31 @@ def test_translates_unexpected_error_without_exposing_details(
 
 def test_declarations_and_dispatch_agree(vault: str) -> None:
     """Use each public schema's fields and types for dispatch validation."""
-    declarations = registry.declarations()
-    assert {item["name"] for item in declarations} == set(registry._tools)
+    declarations = registry.openai_tool_declarations()
+    assert all(item["type"] == "function" for item in declarations)
+    assert {
+        item["name"] for item in declarations if item["type"] == "function"
+    } == set(registry._tools)
     for declaration in declarations:
+        assert declaration["type"] == "function"
         name = declaration["name"]
         spec = registry._tools[name]
         parameters = declaration["parameters"]
+        assert parameters is not None
         properties = parameters["properties"]
+        assert isinstance(properties, dict)
+        required = parameters["required"]
+        assert isinstance(required, list)
         assert declaration["type"] == "function"
         assert declaration["strict"] is True
         assert declaration["description"] == spec.description
         assert parameters["type"] == "object"
         assert parameters["additionalProperties"] is False
-        assert set(parameters["required"]) == set(properties) == set(spec.arguments)
+        assert set(required) == set(properties) == set(spec.arguments)
         assert "vault_path" not in properties
         valid = {field: "Beta.md" for field in properties}
         for field, schema in properties.items():
+            assert isinstance(schema, dict)
             assert schema["description"] == spec.arguments[field].description
             assert schema["type"] == (
                 ["string", "null"] if spec.arguments[field].nullable else "string"
@@ -240,7 +249,10 @@ def test_isolated_registry_uses_its_own_tools(vault: str) -> None:
         return text + (suffix or "")
 
     isolated = Registry((echo,))
-    assert [item["name"] for item in isolated.declarations()] == ["echo"]
+    declarations = isolated.openai_tool_declarations()
+    assert len(declarations) == 1
+    assert declarations[0]["type"] == "function"
+    assert declarations[0]["name"] == "echo"
     output = json.loads(
         isolated.dispatch("echo", '{"text": "hi", "suffix": null}', vault)
     )
