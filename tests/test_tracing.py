@@ -2,21 +2,18 @@ from copy import deepcopy
 from typing import cast
 
 import pytest
-from openai.types.responses import Response, ResponseFunctionToolCall
 
 import src.tracing as tracing
+from src.providers.llm_provider import ModelResponse, ToolCall
 
 
 def test_record_response_without_a_client() -> None:
     """Retain tool requests and missing usage before response validation."""
-    response = Response.model_construct(
-        id="response", model="returned-model", status="incomplete", usage=None,
-        output=[
-            ResponseFunctionToolCall(
-                type="function_call", name="list_notes", call_id="a",
-                arguments='{ "path": null }',
-            )
-        ],
+    response = ModelResponse(
+        response_id="response",
+        model="returned-model",
+        validation_error="incomplete",
+        tool_calls=(ToolCall("a", "list_notes", '{ "path": null }'),),
     )
     trace = tracing.Trace()
     call = trace.record_response(response, elapsed_seconds=2.5)
@@ -49,7 +46,7 @@ def test_request_trace_snapshots_arguments_and_formats_all_messages() -> None:
         "model": "hidden-model",
         "tools": [{"name": "hidden-tool"}],
         "input": [
-            {"role": "developer", "content": "first\nline\tquoted \"text\""},
+            {"role": "developer", "content": 'first\nline\tquoted "text"'},
             {"role": "user", "content": "Question"},
             {
                 "type": "message",
@@ -76,13 +73,11 @@ def test_request_trace_snapshots_arguments_and_formats_all_messages() -> None:
     assert len(str(request).splitlines()) == 1
 
 
-
 def test_request_trace_formats_string_input() -> None:
     """Display a shorthand API input as user text without other arguments."""
     assert str(tracing.RequestTrace({"input": "Hello\nworld", "model": "hidden"})) == (
         'user: "Hello\\nworld"'
     )
-
 
 
 @pytest.mark.parametrize(
@@ -122,7 +117,6 @@ def test_call_trace_string(
     assert call.output == output
 
 
-
 def test_tool_trace_string_and_independent_lists() -> None:
     """Flatten displayed tool results and distinguish empty from missing output."""
     call = tracing.CallTrace(model="model", elapsed_seconds=0)
@@ -143,12 +137,9 @@ def test_tool_trace_string_and_independent_lists() -> None:
     assert call.tool_calls[0].output == "first\nsecond"
 
 
-
 def test_empty_trace_string() -> None:
     """Display zero metrics when no API request has been recorded."""
-    assert str(tracing.Trace()) == (
-        "Total tokens: 0\nTotal API latency: 0.000s"
-    )
+    assert str(tracing.Trace()) == ("Total tokens: 0\nTotal API latency: 0.000s")
 
 
 def test_trace_formatting_preserves_stored_output() -> None:

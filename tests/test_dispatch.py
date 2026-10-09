@@ -50,11 +50,11 @@ def test_dispatches_each_tool(
         ("read_note", '{"notepath": "Beta.md", "extra": true}'),
         ("search_notes", '{"query": 7}'),
         ("search_notes", '{"query": null}'),
-        ("search_notes", '{}'),
+        ("search_notes", "{}"),
         ("get_backlinks", '{"notepath": null}'),
-        ("get_backlinks", '{}'),
+        ("get_backlinks", "{}"),
         ("get_outgoing_links", '{"notepath": false}'),
-        ("get_outgoing_links", '{}'),
+        ("get_outgoing_links", "{}"),
     ],
 )
 def test_rejects_bad_model_arguments(
@@ -97,6 +97,7 @@ def test_translates_io_error_without_exposing_path(
     vault: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Hide filesystem error details while preserving the public I/O code."""
+
     def fail_read(_vault_path: str, notepath: str) -> str:
         raise PermissionError("private path")
 
@@ -120,9 +121,7 @@ def test_invalid_note_encoding_is_an_io_error(tmp_path: Path) -> None:
     (tmp_path / "broken.md").write_bytes(b"\xff")
 
     output = json.loads(
-        registry.dispatch(
-            "read_note", '{"notepath": "broken.md"}', str(tmp_path)
-        )
+        registry.dispatch("read_note", '{"notepath": "broken.md"}', str(tmp_path))
     )
 
     assert output["error"]["code"] == "io_error"
@@ -132,6 +131,7 @@ def test_translates_unexpected_error_without_exposing_details(
     vault: str, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Hide unexpected exception details from callers while logging them."""
+
     def fail_read(_vault_path: str, notepath: str) -> str:
         raise RuntimeError("private detail")
 
@@ -153,24 +153,18 @@ def test_translates_unexpected_error_without_exposing_details(
 
 def test_declarations_and_dispatch_agree(vault: str) -> None:
     """Use each public schema's fields and types for dispatch validation."""
-    declarations = registry.openai_tool_declarations()
-    assert all(item["type"] == "function" for item in declarations)
-    assert {
-        item["name"] for item in declarations if item["type"] == "function"
-    } == set(registry._tools)
+    declarations = registry.tool_definitions()
+    assert {item.name for item in declarations} == set(registry._tools)
     for declaration in declarations:
-        assert declaration["type"] == "function"
-        name = declaration["name"]
+        name = declaration.name
         spec = registry._tools[name]
-        parameters = declaration["parameters"]
+        parameters = declaration.input_schema
         assert parameters is not None
         properties = parameters["properties"]
         assert isinstance(properties, dict)
         required = parameters["required"]
         assert isinstance(required, list)
-        assert declaration["type"] == "function"
-        assert declaration["strict"] is True
-        assert declaration["description"] == spec.description
+        assert declaration.description == spec.description
         assert parameters["type"] == "object"
         assert parameters["additionalProperties"] is False
         assert set(required) == set(properties) == set(spec.arguments)
@@ -204,6 +198,7 @@ def test_declarations_and_dispatch_agree(vault: str) -> None:
 
 def test_registration_rejects_bad_documentation_and_signatures() -> None:
     """Reject missing or mismatched Args and unsupported call shapes."""
+
     def missing(vault_path: str, value: str) -> str:
         return value
 
@@ -249,10 +244,9 @@ def test_isolated_registry_uses_its_own_tools(vault: str) -> None:
         return text + (suffix or "")
 
     isolated = Registry((echo,))
-    declarations = isolated.openai_tool_declarations()
+    declarations = isolated.tool_definitions()
     assert len(declarations) == 1
-    assert declarations[0]["type"] == "function"
-    assert declarations[0]["name"] == "echo"
+    assert declarations[0].name == "echo"
     output = json.loads(
         isolated.dispatch("echo", '{"text": "hi", "suffix": null}', vault)
     )

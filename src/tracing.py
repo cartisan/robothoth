@@ -4,18 +4,21 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass, field
 
-from openai.types.responses import Response
+from src.providers.llm_provider import ModelResponse
 
 
 @dataclass(frozen=True)
 class RequestTrace:
     """Retain an independent snapshot of all supplied API request arguments.
 
-    Nested argument values are copied on construction so later conversation or
-    tool declaration changes cannot alter the recorded request.
+    Explicit prompt messages govern display when supplied. Otherwise, text is
+    extracted from the input argument. Nested argument values are copied on
+    construction so later conversation or tool declaration changes cannot alter
+    the recorded request.
     """
 
     arguments: dict[str, object]
+    prompt_messages: tuple[tuple[str, str], ...] | None = None
 
     def __post_init__(self) -> None:
         """Detach the stored arguments from the caller's mutable request data."""
@@ -24,11 +27,17 @@ class RequestTrace:
     def __str__(self) -> str:
         """Return prompt message roles and text in order on one line.
 
-        String content and input/output text blocks are displayed. Non-message
+        Explicit prompt messages are displayed when provided. Otherwise,
+        string content and input/output text blocks are displayed. Non-message
         inputs and non-text blocks are omitted. A string input is shown as a
         user message. JSON quoting escapes line breaks and tabs in message text;
         model, tools, and other request arguments are retained but not displayed.
         """
+        if self.prompt_messages is not None:
+            return " | ".join(
+                f"{role}: {json.dumps(text, ensure_ascii=False)}"
+                for role, text in self.prompt_messages
+            )
         request_input = self.arguments.get("input", [])
         if isinstance(request_input, str):
             return f"user: {json.dumps(request_input, ensure_ascii=False)}"
@@ -61,8 +70,9 @@ class RequestTrace:
 class ToolCallTrace:
     """Record a requested function and its exact returned output.
 
-    Arguments retain the API's original JSON string. Output is the unmodified
-    dispatcher envelope, including tool errors, or None if no result returned.
+    Arguments retain original JSON strings or serialized provider argument
+    objects. Output is the unmodified dispatcher envelope, including tool errors,
+    or None if no result returned.
     Requests rejected before dispatch and dispatches that raise have no output.
     """
 
@@ -78,7 +88,8 @@ class CallTrace:
 
     Token counts are unknown when the API supplies no usage. Cached and
     cache-write tokens are input breakdowns; reasoning tokens are an output
-    breakdown. Elapsed time includes SDK retries but excludes tool execution.
+    breakdown. Elapsed time includes SDK retries and response normalization but
+    excludes tool execution.
     Output contains all requested function calls in response order as
     ``name(arguments_json)``, or response text when no functions are requested.
     Tool requests take precedence over accompanying text. Invocations that fail
@@ -171,12 +182,17 @@ class Trace:
         """Return summed API elapsed seconds, or zero for an empty trace."""
         return sum((call.elapsed_seconds for call in self.calls), 0.0)
 
-    def record_initial_request(self, arguments: dict[str, object]) -> None:
+    def record_initial_request(
+        self,
+        arguments: dict[str, object],
+        prompt_messages: tuple[tuple[str, str], ...] | None = None,
+    ) -> None:
         """Replace the initial request with an independent argument snapshot.
 
+        Prompt messages provide display text independently of the native request.
         Existing API call traces remain available when the trace is reused.
         """
-        self.initial_request = RequestTrace(arguments)
+        self.initial_request = RequestTrace(arguments, prompt_messages)
 
     def record_failure(self, model: str, elapsed_seconds: float) -> CallTrace:
         """Append and return a failed invocation trace with unknown usage.
@@ -189,7 +205,7 @@ class Trace:
         return call
 
     def record_response(
-        self, response: Response, elapsed_seconds: float
+        self, response: ModelResponse, elapsed_seconds: float
     ) -> CallTrace:
         """Append and return a trace of response metrics and requested tools.
 
@@ -197,29 +213,22 @@ class Trace:
         are retained regardless of response status; response validation remains
         the caller's responsibility. Missing usage stays unknown.
         """
-        function_calls = [
-            item for item in response.output if item.type == "function_call"
-        ]
+        function_calls = response.tool_calls
         output = (
             "\n".join(f"{item.name}({item.arguments})" for item in function_calls)
             if function_calls
-            else response.output_text or None
+            else response.text or None
         )
-        usage = response.usage
         call = CallTrace(
             model=response.model,
-            response_id=response.id,
+            response_id=response.response_id,
             elapsed_seconds=elapsed_seconds,
-            input_tokens=usage.input_tokens if usage else None,
-            output_tokens=usage.output_tokens if usage else None,
-            cached_tokens=usage.input_tokens_details.cached_tokens if usage else None,
-            cache_write_tokens=(
-                usage.input_tokens_details.cache_write_tokens if usage else None
-            ),
-            reasoning_tokens=(
-                usage.output_tokens_details.reasoning_tokens if usage else None
-            ),
-            total_tokens=usage.total_tokens if usage else None,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            cached_tokens=response.cached_tokens,
+            cache_write_tokens=response.cache_write_tokens,
+            reasoning_tokens=response.reasoning_tokens,
+            total_tokens=response.total_tokens,
             output=output,
             tool_calls=[
                 ToolCallTrace(

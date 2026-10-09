@@ -16,9 +16,34 @@ from openai.types.responses import (
 )
 from openai.types.responses.response_output_item import ResponseOutputItem
 
-import src.openai_provider as provider
+import src.harness as provider
+import src.main as example
+import src.providers.openai_provider as openai_adapter
 import src.tracing as tracing
 from src.tools.registry import registry
+
+
+def run_with_openai(
+    client: MagicMock,
+    *,
+    user_prompt: str,
+    vault_path: str,
+    trace: tracing.Trace,
+    model: str = "gpt-6-luna",
+    max_api_calls: int = 20,
+) -> str:
+    """Return a harness answer using an injected scripted OpenAI client.
+
+    Raises:
+        Exception: Harness and scripted client failures propagate unchanged.
+    """
+    return provider.run_in_harness(
+        openai_adapter.OpenAIProvider(client, model=model),
+        user_prompt=user_prompt,
+        vault_path=vault_path,
+        trace=trace,
+        max_api_calls=max_api_calls,
+    )
 
 
 def make_response(
@@ -79,13 +104,12 @@ def test_provider_uses_registered_declarations() -> None:
     """Advertise every registered vault function with its derived schema."""
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done")
-    provider.run(
+    run_with_openai(
         client, user_prompt="Question", vault_path="vault", trace=tracing.Trace()
     )
-    assert (
-        client.responses.create.call_args.kwargs["tools"]
-        == registry.openai_tool_declarations()
-    )
+    assert client.responses.create.call_args.kwargs[
+        "tools"
+    ] == openai_adapter.tool_declarations(registry.tool_definitions())
 
 
 def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,7 +121,7 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     trace = tracing.Trace()
 
     assert (
-        provider.run(
+        run_with_openai(
             client,
             user_prompt="Question",
             vault_path="vault",
@@ -129,7 +153,7 @@ def test_immediate_text_and_usage(monkeypatch: pytest.MonkeyPatch) -> None:
     assert trace.initial_request is not None
     assert trace.initial_request.arguments == {
         "model": "requested-model",
-        "tools": registry.openai_tool_declarations(),
+        "tools": openai_adapter.tool_declarations(registry.tool_definitions()),
         "input": [
             {"role": "developer", "content": provider.SYSTEM_PROMPT},
             {"role": "user", "content": "Question"},
@@ -176,7 +200,7 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
     trace = tracing.Trace()
 
     assert (
-        provider.run(client, user_prompt="Find it", vault_path="vault", trace=trace)
+        run_with_openai(client, user_prompt="Find it", vault_path="vault", trace=trace)
         == "Found it"
     )
 
@@ -215,9 +239,7 @@ def test_multiple_rounds_preserve_history(monkeypatch: pytest.MonkeyPatch) -> No
         "Found it",
     ]
     assert trace.calls[0].tool_calls == [
-        tracing.ToolCallTrace(
-            "a", "list_notes", '{ "path": null }', tool_results[0]
-        ),
+        tracing.ToolCallTrace("a", "list_notes", '{ "path": null }', tool_results[0]),
         tracing.ToolCallTrace(
             "b", "read_note", '{"notepath": "Beta.md"}', tool_results[1]
         ),
@@ -246,7 +268,7 @@ def test_tool_errors_are_sent_to_model() -> None:
     client = MagicMock()
     client.responses.create.side_effect = create
     trace = tracing.Trace()
-    provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+    run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     history = cast(list[dict[str, object]], requests[1]["input"])
     result = json.loads(cast(str, history[-1]["output"]))
     assert history[-1]["call_id"] == "bad"
@@ -267,7 +289,7 @@ def test_call_limit_retains_last_tool_results(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="call limit \\(2\\) reached"):
-        provider.run(
+        run_with_openai(
             client, user_prompt="Find", vault_path="vault", trace=trace, max_api_calls=2
         )
     assert client.responses.create.call_count == 2
@@ -284,7 +306,7 @@ def test_invalid_limit_makes_no_requests(limit: int) -> None:
     client = MagicMock()
     trace = tracing.Trace()
     with pytest.raises(ValueError, match="positive"):
-        provider.run(
+        run_with_openai(
             client,
             user_prompt="Find",
             vault_path="vault",
@@ -303,7 +325,7 @@ def test_noncompleted_responses_are_errors(status: str) -> None:
     client.responses.create.return_value = make_response(text="Partial", status=status)
     trace = tracing.Trace()
     with pytest.raises(RuntimeError, match=status):
-        provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+        run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert trace.total_cost() == 120
     assert trace.calls[0].output == "Partial"
     client.responses.create.assert_called_once()
@@ -315,9 +337,7 @@ def test_empty_response_is_error() -> None:
     client.responses.create.return_value = make_response()
     trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="neither text nor function calls"):
-        provider.run(
-            client, user_prompt="Find", vault_path="vault", trace=trace
-        )
+        run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     client.responses.create.assert_called_once()
     assert trace.calls[0].output is None
 
@@ -338,9 +358,7 @@ def test_unsupported_tool_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(provider.registry, "dispatch", dispatcher)
     trace = tracing.Trace()
     with pytest.raises(RuntimeError, match="Unsupported.*custom_tool_call"):
-        provider.run(
-            client, user_prompt="Find", vault_path="vault", trace=trace
-        )
+        run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     dispatcher.assert_not_called()
     assert trace.calls[0].output == "list_notes({})"
     assert trace.calls[0].tool_calls == [
@@ -358,7 +376,7 @@ def test_sdk_failure_retains_trace(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(provider, "perf_counter", lambda: next(ticks))
     trace = tracing.Trace()
     with pytest.raises(APIConnectionError) as raised:
-        provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+        run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert raised.value is error
     assert len(trace.calls) == 2
     assert trace.calls[0].total_tokens == 120
@@ -382,17 +400,20 @@ def test_reused_trace_replaces_initial_request() -> None:
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done")
     trace = tracing.Trace()
-    provider.run(client, user_prompt="First", vault_path="vault", trace=trace)
+    run_with_openai(client, user_prompt="First", vault_path="vault", trace=trace)
     first = trace.initial_request
-    provider.run(client, user_prompt="Second", vault_path="vault", trace=trace)
+    run_with_openai(client, user_prompt="Second", vault_path="vault", trace=trace)
     assert trace.initial_request is not None
     assert trace.initial_request is not first
     assert 'user: "Second"' in str(trace.initial_request)
     assert len(trace.calls) == 2
     current = trace.initial_request
     with pytest.raises(ValueError):
-        provider.run(
-            client, user_prompt="Invalid", vault_path="vault", trace=trace,
+        run_with_openai(
+            client,
+            user_prompt="Invalid",
+            vault_path="vault",
+            trace=trace,
             max_api_calls=0,
         )
     assert trace.initial_request is current
@@ -413,7 +434,7 @@ def test_dispatch_failure_retains_earlier_results(
     trace = tracing.Trace()
 
     with pytest.raises(RuntimeError, match="dispatch failed") as raised:
-        provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+        run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
 
     assert raised.value is error
     assert trace.calls[0].tool_calls == [
@@ -433,7 +454,7 @@ def test_missing_usage_and_independent_traces() -> None:
     assert trace.total_latency() == 0.0
     client = MagicMock()
     client.responses.create.return_value = make_response(text="Done", usage=False)
-    provider.run(client, user_prompt="Find", vault_path="vault", trace=trace)
+    run_with_openai(client, user_prompt="Find", vault_path="vault", trace=trace)
     assert trace.total_cost() is None
     assert trace.calls[0].input_tokens is None
     assert trace.calls[0].output == "Done"
@@ -456,16 +477,16 @@ def test_main_prints_metrics_and_closes_client(
     else:
         client.responses.create.return_value = make_response(text="Final answer")
     factory = MagicMock()
-    factory.return_value.__enter__.return_value = client
-    monkeypatch.setattr(provider, "load_dotenv", dotenv)
-    monkeypatch.setattr(provider, "OpenAI", factory)
+    factory.return_value = client
+    monkeypatch.setattr(example, "load_dotenv", dotenv)
+    monkeypatch.setattr(openai_adapter, "OpenAI", factory)
     if fails:
         with pytest.raises(APIConnectionError):
-            provider.main()
+            example.main()
     else:
-        provider.main()
+        example.main()
     dotenv.assert_called_once_with()
-    factory.return_value.__exit__.assert_called_once()
+    client.close.assert_called_once()
     output = capsys.readouterr().out
     initial_line = next(
         line for line in output.splitlines() if line.startswith("Initial request:")
