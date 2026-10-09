@@ -202,6 +202,68 @@ def test_mixed_calls_follow_raw_order(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
 
 
+def test_mixed_responses_calls_match_call_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dispatch Responses calls in output order using call IDs, not item IDs."""
+    first = AIMessage(
+        content=[
+            {"type": "reasoning", "id": "reasoning-item"},
+            {
+                "type": "function_call",
+                "id": "bad-item",
+                "call_id": "bad-call",
+                "name": "read_note",
+                "arguments": "{",
+            },
+            {
+                "type": "function_call",
+                "id": "good-item",
+                "call_id": "good-call",
+                "name": "list_notes",
+                "arguments": '{ "path": null }',
+            },
+        ],
+        tool_calls=[{"name": "list_notes", "args": {"path": None}, "id": "good-call"}],
+        invalid_tool_calls=[
+            {"name": "read_note", "args": "{", "id": "bad-call", "error": "bad"}
+        ],
+    )
+    model = ScriptedChatModel(responses=[first, AIMessage(content="Done")])
+    dispatcher = MagicMock(side_effect=["bad result", "good result"])
+    monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
+    trace = Trace()
+
+    assert (
+        harness.run_in_harness(
+            model, user_prompt="Find", vault_path="vault", trace=trace
+        )
+        == "Done"
+    )
+    assert [call.call_id for call in trace.calls[0].tool_calls] == [
+        "bad-call",
+        "good-call",
+    ]
+    assert [call.arguments for call in trace.calls[0].tool_calls] == [
+        "{",
+        '{ "path": null }',
+    ]
+    assert [call.kwargs for call in dispatcher.call_args_list] == [
+        {"name": "read_note", "arguments_json": "{", "vault_path": "vault"},
+        {
+            "name": "list_notes",
+            "arguments_json": '{ "path": null }',
+            "vault_path": "vault",
+        },
+    ]
+    assert [
+        message.tool_call_id
+        for message in model.requests[1][3:]
+        if isinstance(message, ToolMessage)
+    ] == [
+        "bad-call",
+        "good-call",
+    ]
+
+
 @pytest.mark.parametrize(
     "response",
     [

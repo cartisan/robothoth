@@ -41,8 +41,10 @@ def message_text(message: AIMessage) -> tuple[str, str | None]:
 def message_tool_calls(message: AIMessage) -> tuple[list["ToolCallTrace"], str | None]:
     """Return calls with original argument strings and a call-order error.
 
-    Valid and malformed calls use native call order when mixed. If their order
-    cannot be recovered unambiguously, the error prevents dispatch.
+    Valid and malformed calls use native call order when mixed. Responses API
+    function calls match LangChain calls by call_id, while other tool calls
+    match by id. If order cannot be recovered unambiguously, the error prevents
+    dispatch.
     """
     calls = [
         ToolCallTrace(
@@ -58,17 +60,32 @@ def message_tool_calls(message: AIMessage) -> tuple[list["ToolCallTrace"], str |
     )
     raw_calls = message.additional_kwargs.get("tool_calls")
     if not isinstance(raw_calls, list):
-        raw_calls = message.content if isinstance(message.content, list) else []
+        raw_calls = (
+            [
+                block
+                for block in message.content
+                if isinstance(block, dict)
+                and block.get("type") in {"function_call", "tool_use", "tool_call"}
+            ]
+            if isinstance(message.content, list)
+            else []
+        )
     raw_arguments: dict[str, str] = {}
     order: list[str] = []
     for raw in raw_calls:
-        if not isinstance(raw, dict) or not isinstance(raw.get("id"), str):
+        if not isinstance(raw, dict):
             continue
-        call_id = raw["id"]
+        call_id = (
+            raw.get("call_id") if raw.get("type") == "function_call" else raw.get("id")
+        )
+        if not isinstance(call_id, str):
+            continue
         order.append(call_id)
         function = raw.get("function")
         arguments = (
-            function.get("arguments") if isinstance(function, dict) else raw.get("args")
+            function.get("arguments")
+            if isinstance(function, dict)
+            else raw.get("arguments", raw.get("args"))
         )
         if isinstance(arguments, str):
             raw_arguments[call_id] = arguments
