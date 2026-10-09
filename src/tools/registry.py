@@ -6,9 +6,8 @@ import logging
 import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from typing import get_args, get_origin, get_type_hints
+from typing import Any, get_args, get_origin, get_type_hints
 
-from src.providers.llm_provider import ToolDefinition
 from src.tools.get_backlinks import get_backlinks
 from src.tools.get_outgoing_links import get_outgoing_links
 from src.tools.list_notes import list_notes
@@ -145,18 +144,18 @@ class Registry:
                 raise ValueError(f"Duplicate tool name: {name}")
             self._tools[name] = spec
 
-    def tool_definitions(self) -> list[ToolDefinition]:
-        """Return provider-neutral definitions for all registered tools.
+    def tool_definitions(self) -> list[dict[str, Any]]:
+        """Return LangChain-compatible definitions for all registered tools.
 
         Every public argument is required, including nullable arguments. Schemas
         reject unknown properties and do not expose vault_path. Each call returns
-        fresh schema dictionaries so adapter changes cannot affect registration.
+        fresh schema dictionaries so model binding cannot affect registration.
         """
         return [
-            ToolDefinition(
-                name=name,
-                description=spec.description,
-                input_schema={
+            {
+                "name": name,
+                "description": spec.description,
+                "parameters": {
                     "type": "object",
                     "properties": {
                         argument_name: {
@@ -170,7 +169,7 @@ class Registry:
                     "required": list(spec.arguments),
                     "additionalProperties": False,
                 },
-            )
+            }
             for name, spec in self._tools.items()
         ]
 

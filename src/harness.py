@@ -1,10 +1,19 @@
-"""Run vault tool conversations independently of model APIs."""
+"""Run vault tool conversations with LangChain chat models."""
 
 from time import perf_counter
+from typing import Any
 
-from src.providers.llm_provider import LLMProvider, ToolResult
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
+
 from src.tools.registry import registry
-from src.tracing import Trace
+from src.tracing import Trace, message_text, message_tool_calls
 
 SYSTEM_PROMPT = """You are an assistant that helps navigate an Obsidian note vault.
 The vault is located under a vault path on the local machine,
@@ -16,70 +25,108 @@ Help the user with the following query:
 
 
 def run_in_harness(
-    provider: LLMProvider,
+    chat_model: BaseChatModel,
     *,
     user_prompt: str,
     vault_path: str,
     trace: Trace,
     max_api_calls: int = 20,
+    model_label: str | None = None,
+    tool_binding_kwargs: dict[str, Any] | None = None,
 ) -> str:
     """Return final assistant text after resolving registered vault tool calls.
 
-    Tools operate within vault_path. Their exact results, including error
-    envelopes, are returned through the provider session. Text accompanying tool
-    calls is intermediate; completion requires nonempty text without tool calls.
+    Each run binds the registry tools and owns its conversation history. Tool
+    outputs, including error envelopes, are returned exactly as ToolMessages.
+    Completion requires nonempty text without calls. The call limit includes
+    final completion, and tools from the last allowed response still execute.
+    Invocation traces retain usage and completed tool results on failure.
 
-    Valid runs replace the initial trace snapshot and append invocation metrics
-    and tool results, retaining them on failure. Invalid call limits leave the
-    trace unchanged. Latency measures provider invocations, including SDK retries
-    and response normalization, but excludes tool execution.
-
-    max_api_calls counts invocations including final completion, not SDK retries.
-    Tools from the last allowed response execute before a call-limit error.
+    Args:
+        chat_model: A synchronous LangChain model supporting tool binding.
+        user_prompt: The user's vault question.
+        vault_path: Root used by registered tools.
+        trace: Collector for request, response, and tool metrics.
+        max_api_calls: Maximum model invocations in this run.
+        model_label: Label for failed invocations and responses without model
+            metadata. Defaults to the chat model's class name.
+        tool_binding_kwargs: Optional arguments passed to bind_tools, such as
+            strict=True for supporting models.
 
     Raises:
         ValueError: If max_api_calls is not positive.
-        RuntimeError: If a response is invalid, has missing or duplicate tool IDs,
-            contains neither text nor tools, or requires calls beyond the limit.
-        Exception: Original provider and unexpected dispatch exceptions propagate.
+        RuntimeError: If a response is invalid or the call limit is reached.
+        Exception: Original binding, invocation, and unexpected dispatch errors
+            propagate unchanged.
     """
     if max_api_calls <= 0:
         raise ValueError("max_api_calls must be positive")
-
-    session = provider.start_session(
-        SYSTEM_PROMPT, user_prompt, registry.tool_definitions()
+    tools = registry.tool_definitions()
+    bound = chat_model.bind_tools(tools, **(tool_binding_kwargs or {}))
+    messages: list[BaseMessage] = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=user_prompt),
+    ]
+    label = model_label or type(chat_model).__name__
+    trace.record_initial_request(
+        model=label,
+        tools=tools,
+        messages=[m.model_dump(mode="json") for m in messages],
+        tool_binding_kwargs=tool_binding_kwargs or {},
+        prompt_messages=[("system", SYSTEM_PROMPT), ("user", user_prompt)],
     )
-    trace.record_initial_request(session.initial_request, session.prompt_messages)
 
     for _ in range(max_api_calls):
         started = perf_counter()
         try:
-            response = session.invoke()
+            response = bound.invoke(list(messages))
         except Exception:
-            trace.record_failure(session.model, perf_counter() - started)
+            trace.record_failure(label, perf_counter() - started)
             raise
-        call_trace = trace.record_response(response, perf_counter() - started)
-        if response.validation_error:
-            raise RuntimeError(response.validation_error)
-        calls = response.tool_calls
+        elapsed = perf_counter() - started
+        if not isinstance(response, AIMessage):
+            trace.record_failure(label, elapsed)
+            raise RuntimeError("LangChain response must be AIMessage")
+        calls, error = message_tool_calls(response)
+        answer, content_error = message_text(response)
+        call_trace = trace.record_response(response, elapsed, label, calls, answer)
+        error = error or content_error
+        metadata = response.response_metadata
+        status = metadata.get("status")
+        if status is not None and status not in {"completed", "complete"}:
+            error = f"LangChain response status is {status}"
+        finish = metadata.get("finish_reason", metadata.get("stop_reason"))
+        if finish is not None and finish not in {
+            "stop",
+            "end_turn",
+            "tool_calls",
+            "tool_use",
+            "function_call",
+            "stop_sequence",
+        }:
+            error = f"LangChain response stopped with {finish}"
+        elif finish in {"tool_calls", "tool_use", "function_call"} and not calls:
+            error = f"LangChain response has no calls for stop reason {finish}"
+        if response.additional_kwargs.get("refusal"):
+            error = "LangChain response contains a refusal"
+        if error:
+            raise RuntimeError(error)
         if any(not call.call_id or not call.name for call in calls) or len(
             {call.call_id for call in calls}
         ) != len(calls):
             raise RuntimeError("Tool calls require names and unique nonempty IDs")
         if not calls:
-            if not response.text:
+            if not answer:
                 raise RuntimeError(
                     "API response contains neither text nor function calls"
                 )
-            return response.text
-
-        results: list[ToolResult] = []
+            return answer
+        messages.append(response)
         for index, call in enumerate(calls):
             output = registry.dispatch(
                 name=call.name, arguments_json=call.arguments, vault_path=vault_path
             )
             call_trace.record_tool_result(index, output)
-            results.append(ToolResult(call.call_id, output))
-        session.add_tool_results(results)
+            messages.append(ToolMessage(content=output, tool_call_id=call.call_id))
 
     raise RuntimeError(f"API call limit ({max_api_calls}) reached")

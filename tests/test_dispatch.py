@@ -154,17 +154,17 @@ def test_translates_unexpected_error_without_exposing_details(
 def test_declarations_and_dispatch_agree(vault: str) -> None:
     """Use each public schema's fields and types for dispatch validation."""
     declarations = registry.tool_definitions()
-    assert {item.name for item in declarations} == set(registry._tools)
+    assert {item["name"] for item in declarations} == set(registry._tools)
     for declaration in declarations:
-        name = declaration.name
+        name = declaration["name"]
         spec = registry._tools[name]
-        parameters = declaration.input_schema
+        parameters = declaration["parameters"]
         assert parameters is not None
         properties = parameters["properties"]
         assert isinstance(properties, dict)
         required = parameters["required"]
         assert isinstance(required, list)
-        assert declaration.description == spec.description
+        assert declaration["description"] == spec.description
         assert parameters["type"] == "object"
         assert parameters["additionalProperties"] is False
         assert set(required) == set(properties) == set(spec.arguments)
@@ -246,7 +246,7 @@ def test_isolated_registry_uses_its_own_tools(vault: str) -> None:
     isolated = Registry((echo,))
     declarations = isolated.tool_definitions()
     assert len(declarations) == 1
-    assert declarations[0].name == "echo"
+    assert declarations[0]["name"] == "echo"
     output = json.loads(
         isolated.dispatch("echo", '{"text": "hi", "suffix": null}', vault)
     )

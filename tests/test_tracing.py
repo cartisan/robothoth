@@ -2,21 +2,29 @@ from copy import deepcopy
 from typing import cast
 
 import pytest
+from langchain_core.messages import AIMessage
 
 import src.tracing as tracing
-from src.providers.llm_provider import ModelResponse, ToolCall
+from src.tracing import message_text, message_tool_calls
 
 
 def test_record_response_without_a_client() -> None:
     """Retain tool requests and missing usage before response validation."""
-    response = ModelResponse(
-        response_id="response",
-        model="returned-model",
-        validation_error="incomplete",
-        tool_calls=(ToolCall("a", "list_notes", '{ "path": null }'),),
+    response = AIMessage(
+        id="response",
+        content="",
+        tool_calls=[{"name": "list_notes", "args": {"path": None}, "id": "a"}],
+        additional_kwargs={
+            "tool_calls": [{"id": "a", "function": {"arguments": '{ "path": null }'}}]
+        },
+        response_metadata={"model_name": "returned-model"},
     )
     trace = tracing.Trace()
-    call = trace.record_response(response, elapsed_seconds=2.5)
+    calls, error = message_tool_calls(response)
+    assert error is None
+    text, content_error = message_text(response)
+    assert content_error is None
+    call = trace.record_response(response, 2.5, "requested", calls, text)
     assert trace.calls == [call]
     assert call.response_id == "response"
     assert call.model == "returned-model"
@@ -77,6 +85,36 @@ def test_request_trace_formats_string_input() -> None:
     """Display a shorthand API input as user text without other arguments."""
     assert str(tracing.RequestTrace({"input": "Hello\nworld", "model": "hidden"})) == (
         'user: "Hello\\nworld"'
+    )
+
+
+def test_initial_request_snapshots_multiple_prompt_messages() -> None:
+    """Copy named request inputs and display every initial message in order."""
+    trace = tracing.Trace()
+    tools = [{"name": "list_notes", "parameters": {"type": "object"}}]
+    messages = [{"type": "system", "content": "System"}]
+    options = {"strict": True}
+    prompts = [("system", "System"), ("user", "First"), ("user", "Second")]
+    trace.record_initial_request(
+        model="configured-model",
+        tools=tools,
+        messages=messages,
+        tool_binding_kwargs=options,
+        prompt_messages=prompts,
+    )
+    tools[0]["name"] = "changed"
+    messages[0]["content"] = "changed"
+    options["strict"] = False
+    prompts.append(("user", "Third"))
+    assert trace.initial_request is not None
+    assert trace.initial_request.arguments == {
+        "model": "configured-model",
+        "tools": [{"name": "list_notes", "parameters": {"type": "object"}}],
+        "messages": [{"type": "system", "content": "System"}],
+        "tool_binding_kwargs": {"strict": True},
+    }
+    assert str(trace.initial_request) == (
+        'system: "System" | user: "First" | user: "Second"'
     )
 
 
