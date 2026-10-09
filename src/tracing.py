@@ -3,32 +3,140 @@
 import json
 from copy import deepcopy
 from dataclasses import dataclass, field
+from typing import Any
 
-from openai.types.responses import Response
+from langchain_core.messages import AIMessage
+
+
+def message_text(message: AIMessage) -> tuple[str, str | None]:
+    """Return supported assistant text and any unsupported content error.
+
+    Text blocks are concatenated in order. Reasoning and tool blocks contribute
+    no final text; unknown blocks make the response invalid.
+    """
+    if isinstance(message.content, str):
+        return message.content, None
+    parts: list[str] = []
+    for block in message.content:
+        if isinstance(block, str):
+            parts.append(block)
+        elif isinstance(block, dict):
+            kind = block.get("type")
+            if kind in {"text", "output_text"}:
+                parts.append(str(block.get("text", "")))
+            elif kind not in {
+                "reasoning",
+                "thinking",
+                "redacted_thinking",
+                "tool_use",
+                "tool_call",
+                "function_call",
+            }:
+                return "".join(parts), f"Unsupported LangChain content type: {kind}"
+        else:
+            return "".join(parts), "Unsupported LangChain content block"
+    return "".join(parts), None
+
+
+def message_tool_calls(message: AIMessage) -> tuple[list["ToolCallTrace"], str | None]:
+    """Return calls with original argument strings and a call-order error.
+
+    Valid and malformed calls use native call order when mixed. Responses API
+    function calls match LangChain calls by call_id, while other tool calls
+    match by id. If order cannot be recovered unambiguously, the error prevents
+    dispatch.
+    """
+    calls = [
+        ToolCallTrace(
+            c.get("id") or "",
+            c.get("name") or "",
+            json.dumps(c.get("args"), ensure_ascii=False),
+        )
+        for c in message.tool_calls
+    ]
+    calls.extend(
+        ToolCallTrace(c.get("id") or "", c.get("name") or "", c.get("args") or "")
+        for c in message.invalid_tool_calls
+    )
+    raw_calls = message.additional_kwargs.get("tool_calls")
+    if not isinstance(raw_calls, list):
+        raw_calls = (
+            [
+                block
+                for block in message.content
+                if isinstance(block, dict)
+                and block.get("type") in {"function_call", "tool_use", "tool_call"}
+            ]
+            if isinstance(message.content, list)
+            else []
+        )
+    raw_arguments: dict[str, str] = {}
+    order: list[str] = []
+    for raw in raw_calls:
+        if not isinstance(raw, dict):
+            continue
+        call_id = (
+            raw.get("call_id") if raw.get("type") == "function_call" else raw.get("id")
+        )
+        if not isinstance(call_id, str):
+            continue
+        order.append(call_id)
+        function = raw.get("function")
+        arguments = (
+            function.get("arguments")
+            if isinstance(function, dict)
+            else raw.get("arguments", raw.get("args"))
+        )
+        if isinstance(arguments, str):
+            raw_arguments[call_id] = arguments
+    for call in calls:
+        call.arguments = raw_arguments.get(call.call_id, call.arguments)
+    if message.tool_calls and message.invalid_tool_calls:
+        if (
+            len(order) != len(calls)
+            or len(set(order)) != len(order)
+            or set(order) != {c.call_id for c in calls}
+        ):
+            return (
+                calls,
+                "Cannot recover order of valid and invalid LangChain tool calls",
+            )
+        calls.sort(key=lambda call: order.index(call.call_id))
+    return calls, None
 
 
 @dataclass(frozen=True)
 class RequestTrace:
     """Retain an independent snapshot of all supplied API request arguments.
 
-    Nested argument values are copied on construction so later conversation or
-    tool declaration changes cannot alter the recorded request.
+    Explicit prompt messages govern display when supplied. Otherwise, text is
+    extracted from the input argument. Nested argument values are copied on
+    construction so later conversation or tool declaration changes cannot alter
+    the recorded request.
     """
 
     arguments: dict[str, object]
+    prompt_messages: list[tuple[str, str]] | None = None
 
     def __post_init__(self) -> None:
-        """Detach the stored arguments from the caller's mutable request data."""
+        """Detach arguments and prompt messages from mutable caller data."""
         object.__setattr__(self, "arguments", deepcopy(self.arguments))
+        object.__setattr__(self, "prompt_messages", deepcopy(self.prompt_messages))
 
     def __str__(self) -> str:
         """Return prompt message roles and text in order on one line.
 
-        String content and input/output text blocks are displayed. Non-message
+        Explicit prompt messages are displayed when provided. Otherwise,
+        string content and input/output text blocks are displayed. Non-message
         inputs and non-text blocks are omitted. A string input is shown as a
         user message. JSON quoting escapes line breaks and tabs in message text;
         model, tools, and other request arguments are retained but not displayed.
         """
+        if self.prompt_messages is not None:
+            return " | ".join(
+                f"{role}: {json.dumps(text, ensure_ascii=False)}"
+                for role, text in self.prompt_messages
+            )
         request_input = self.arguments.get("input", [])
         if isinstance(request_input, str):
             return f"user: {json.dumps(request_input, ensure_ascii=False)}"
@@ -61,8 +169,9 @@ class RequestTrace:
 class ToolCallTrace:
     """Record a requested function and its exact returned output.
 
-    Arguments retain the API's original JSON string. Output is the unmodified
-    dispatcher envelope, including tool errors, or None if no result returned.
+    Arguments retain original JSON strings when available or serialized
+    LangChain argument objects. Output is the unmodified dispatcher envelope,
+    including tool errors, or None if no result returned.
     Requests rejected before dispatch and dispatches that raise have no output.
     """
 
@@ -78,7 +187,8 @@ class CallTrace:
 
     Token counts are unknown when the API supplies no usage. Cached and
     cache-write tokens are input breakdowns; reasoning tokens are an output
-    breakdown. Elapsed time includes SDK retries but excludes tool execution.
+    breakdown. Elapsed time covers the model invocation and excludes tool
+    execution.
     Output contains all requested function calls in response order as
     ``name(arguments_json)``, or response text when no functions are requested.
     Tool requests take precedence over accompanying text. Invocations that fail
@@ -171,12 +281,28 @@ class Trace:
         """Return summed API elapsed seconds, or zero for an empty trace."""
         return sum((call.elapsed_seconds for call in self.calls), 0.0)
 
-    def record_initial_request(self, arguments: dict[str, object]) -> None:
-        """Replace the initial request with an independent argument snapshot.
+    def record_initial_request(
+        self,
+        model: str,
+        tools: list[dict[str, Any]],
+        messages: list[dict[str, Any]],
+        tool_binding_kwargs: dict[str, Any],
+        prompt_messages: list[tuple[str, str]],
+    ) -> None:
+        """Replace the initial request with a snapshot of model call inputs.
 
-        Existing API call traces remain available when the trace is reused.
+        Tools, serialized messages, binding options, and display prompt messages
+        are copied. Any prior call traces remain when the trace is reused.
         """
-        self.initial_request = RequestTrace(arguments)
+        self.initial_request = RequestTrace(
+            {
+                "model": model,
+                "tools": tools,
+                "messages": messages,
+                "tool_binding_kwargs": tool_binding_kwargs,
+            },
+            prompt_messages,
+        )
 
     def record_failure(self, model: str, elapsed_seconds: float) -> CallTrace:
         """Append and return a failed invocation trace with unknown usage.
@@ -189,7 +315,12 @@ class Trace:
         return call
 
     def record_response(
-        self, response: Response, elapsed_seconds: float
+        self,
+        response: AIMessage,
+        elapsed_seconds: float,
+        model_label: str,
+        tool_calls: list[ToolCallTrace],
+        text: str,
     ) -> CallTrace:
         """Append and return a trace of response metrics and requested tools.
 
@@ -197,36 +328,28 @@ class Trace:
         are retained regardless of response status; response validation remains
         the caller's responsibility. Missing usage stays unknown.
         """
-        function_calls = [
-            item for item in response.output if item.type == "function_call"
-        ]
         output = (
-            "\n".join(f"{item.name}({item.arguments})" for item in function_calls)
-            if function_calls
-            else response.output_text or None
+            "\n".join(f"{item.name}({item.arguments})" for item in tool_calls)
+            if tool_calls
+            else text or None
         )
-        usage = response.usage
+        usage = response.usage_metadata
+        input_details = usage.get("input_token_details", {}) if usage else {}
+        output_details = usage.get("output_token_details", {}) if usage else {}
+        metadata = response.response_metadata
+        model = metadata.get("model_name") or metadata.get("model")
         call = CallTrace(
-            model=response.model,
+            model=model if isinstance(model, str) else model_label,
             response_id=response.id,
             elapsed_seconds=elapsed_seconds,
-            input_tokens=usage.input_tokens if usage else None,
-            output_tokens=usage.output_tokens if usage else None,
-            cached_tokens=usage.input_tokens_details.cached_tokens if usage else None,
-            cache_write_tokens=(
-                usage.input_tokens_details.cache_write_tokens if usage else None
-            ),
-            reasoning_tokens=(
-                usage.output_tokens_details.reasoning_tokens if usage else None
-            ),
-            total_tokens=usage.total_tokens if usage else None,
+            input_tokens=usage.get("input_tokens") if usage else None,
+            output_tokens=usage.get("output_tokens") if usage else None,
+            cached_tokens=input_details.get("cache_read"),
+            cache_write_tokens=input_details.get("cache_creation"),
+            reasoning_tokens=output_details.get("reasoning"),
+            total_tokens=usage.get("total_tokens") if usage else None,
             output=output,
-            tool_calls=[
-                ToolCallTrace(
-                    call_id=item.call_id, name=item.name, arguments=item.arguments
-                )
-                for item in function_calls
-            ],
+            tool_calls=tool_calls,
         )
         self.calls.append(call)
         return call
