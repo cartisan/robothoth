@@ -11,8 +11,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from .harness import run_in_harness
-from .tracing import Trace
+from src.harness import run_in_harness
+from src.tracing import Trace
 
 VAULT_PATH = str(Path(__file__).resolve().parents[1] / "tests/test_vault")
 EXAMPLE_PROMPT = (
