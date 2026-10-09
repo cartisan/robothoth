@@ -2,12 +2,8 @@
 
 import argparse
 import os
-import sys
 from pathlib import Path
 from typing import Any
-
-if __package__ in {None, ""}:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
@@ -15,8 +11,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from src.harness import run_in_harness
-from src.tracing import Trace
+from .harness import run_in_harness
+from .tracing import Trace
 
 VAULT_PATH = str(Path(__file__).resolve().parents[1] / "tests/test_vault")
 EXAMPLE_PROMPT = (
