@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "search-tool-usage",
+      "request": "Where is the Golden Evaluation Dataset note in this vault?",
+      "added_reason": "Check that notes can be found, and that the list_note tool is used for this",
+      "dataset_version": 1,
+      "ground_truth": {
+        "ideal_answer": "The note is at 2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md.",
+        "answer_criteria": [
+          "The execution trace contains the list_notes tool.",
+          "The execution traces does not contain any other tools."
+        ]
+      }
+    },
+    {
+      "id": "multi-tool-usage",
+      "request": "According to the Golden Evaluation Dataset note, summarize what makes a good evaluation dataset?",
+      "added_reason": "Check that that note content is reproduced correctly and summarization is concise",
+      "dataset_version": 1,
+      "ground_truth": {
+        "answer_criteria": [
+          "Mentions representative cases, including edge cases or long-tail examples.",
+          "Mentions ground-truth labels or criteria that domain experts would agree on.",
+          "Mentions versioning and a reason for adding each case.",
+          "Mentions a clear, consistent schema for cases.",
+          "The answer is concise, it contains only a 3-4 sentences.",
+          "The execution trace contains the list_notes tool.",
+          "The execution trace contains the read_note tool."
+        ]
+      }
+    },
+    {
+      "id": "multi-note-synthesis",
+      "request": "How would you build and calibrate a rubric-based LLM judge for customer-support chatbot answers, and keep its scores from being skewed by common judge biases?",
+      "added_reason": "Check that multiple note content is integrated by the system.",
+      "dataset_version": 1,
+      "ground_truth": {
+        "ideal_answer": "Define several specific, measurable, nonoverlapping criteria for the chatbot's answers, such as politeness, policy adherence, and correct escalation. Have an LLM judge score each criterion on a Likert scale with anchor examples for the scale's extremes. Calibrate its grades against domain experts using real outcomes, examples, a test set, and a held-out validation set; refine the rubric or judge prompt when they disagree. Reduce position bias by swapping answer order in pairwise comparisons, verbosity bias with a concision criterion, and self-preference bias by using an independent judge family or comparing answers from the same family.",
+        "answer_criteria": [
+          "The execution trace shows that both the Rubric Based Evaluation note and the LLM-as-a-Judge note were read."
+        ]
+      }
+    }
+  ]
+}

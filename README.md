@@ -20,6 +20,10 @@ and `kimi-k2.6` through Moonshot's OpenAI-compatible endpoint. Running
 available as `execute_openai()`, `execute_claude()`, and `execute_kimi()` in
 `src.main`.
 
+The manually maintained [gold dataset](src/gold_dataset/README.md) contains
+validated evaluation cases. Run `uv run --locked python -m src.gold_dataset` to
+validate the bundled file and print its case count.
+
 Pass a configured, tool-capable LangChain `BaseChatModel` directly:
 
 ```python

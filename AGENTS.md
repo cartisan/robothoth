@@ -6,3 +6,8 @@ resolution or validation rules, and edge cases. Add a `Raises:` section for
 exceptions callers must handle. For functions that return error envelopes,
 describe the returned error codes instead. Describe observable behavior rather
 than narrating implementation steps, and keep docstrings consistent with the code.
+
+# Function signatures
+
+Prefer positional-or-keyword parameters over keyword-only `*` parameters unless
+the interface has a concrete need to require keyword arguments.
