@@ -19,5 +19,4 @@ Always use explicit keyword arguments for all function and method calls.
 # System prompt versions
 
 When changing a bundled `SystemPrompt`'s text, increment its positive integer
-version, normally by one. Versions are independent for each prompt and maintained
-manually; CI does not enforce version increases.
+version, normally by one. Versions are independent for each prompt .
