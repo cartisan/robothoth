@@ -18,8 +18,7 @@ def read_note(vault_path: str, notepath: str) -> str:
     """
     relative_path = Path(notepath)
     if (
-        not notepath
-        or relative_path.is_absolute()
+        relative_path.is_absolute()
         or ".." in relative_path.parts
         or relative_path.suffix != ".md"
     ):

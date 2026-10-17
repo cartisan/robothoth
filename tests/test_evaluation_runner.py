@@ -9,6 +9,7 @@ import pytest
 from langchain_core.messages import AIMessage
 from test_gold_dataset import entry, write_dataset
 from test_harness import ScriptedChatModel
+from test_semantic_judge import structured_response
 
 import src.evaluation.run as cli
 import src.evaluation.runner as runner
@@ -32,19 +33,16 @@ def judge_with(*responses: Any) -> SemanticJudge:
     model.with_structured_output.return_value.invoke.side_effect = [
         response
         if isinstance(response, Exception)
-        else {
-            "raw": raw,
-            "parsed": {
-                "scores": [
-                    {
-                        "expectation_id": "ideal_answer",
-                        "score": response,
-                        "explanation": "Meaning checked",
-                    }
-                ]
-            },
-            "parsing_error": None,
-        }
+        else structured_response(
+            raw=raw,
+            scores=[
+                {
+                    "expectation_id": "ideal_answer",
+                    "score": response,
+                    "explanation": "Meaning checked",
+                }
+            ],
+        )
         for response in responses
     ]
     return SemanticJudge(model)
@@ -256,7 +254,6 @@ def test_initial_report_and_atomic_updates_after_each_repeat(
     "changes",
     [
         {"repeats": 0},
-        {"repeats": True},
         {"max_api_calls": 0},
         {"vault_path": "/nonexistent-evaluation-vault"},
     ],
@@ -295,6 +292,29 @@ def test_empty_and_invalid_later_entries_rejected_before_calls(tmp_path: Path) -
                 report_destination=tmp_path,
             )
     candidate.bind_tools.assert_not_called()
+
+
+@pytest.mark.parametrize(argnames="component", argvalues=["harness", "judge"])
+def test_unexpected_component_errors_propagate(
+    component: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep programming errors visible instead of scoring them as provider failures."""
+    path = tmp_path / "dataset.json"
+    write_dataset(path=path, entries=[entry()])
+    judge = judge_with(5)
+    failure = MagicMock(side_effect=TypeError("broken internal call"))
+    if component == "harness":
+        monkeypatch.setattr(target=runner, name="run_in_harness", value=failure)
+    else:
+        monkeypatch.setattr(target=judge, name="grade", value=failure)
+    with pytest.raises(expected_exception=TypeError, match="broken internal call"):
+        run_evaluation(
+            candidate_model=ScriptedChatModel(responses=[AIMessage(content="Answer")]),
+            vault_path=tmp_path,
+            judge=judge,
+            dataset_path=path,
+            report_destination=tmp_path,
+        )
 
 
 def test_credentials_excluded_from_nested_configuration(tmp_path: Path) -> None:
@@ -422,7 +442,8 @@ def test_cli_independent_provider_settings_and_bundled_prompts(
     assert models[0].settings == {"max_tokens": 1000}
     assert models[1].settings == {"reasoning_effort": "medium"}
     assert candidate.requests[0][0].content == SYSTEM_PROMPT.text
-    messages = judge.model.with_structured_output.return_value.invoke.call_args.args[0]  # type: ignore[attr-defined]
+    invocation = judge.model.with_structured_output.return_value.invoke  # type: ignore[attr-defined]
+    messages = invocation.call_args.kwargs["input"]
     assert messages[0].content == DEFAULT_JUDGE_PROMPT.text
     assert candidate.binding_kwargs == {"tool_choice": "auto"}
     report_path = next((tmp_path / "reports").glob("*/report.json"))
@@ -618,8 +639,8 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
     model = MagicMock()
     model.model_dump.return_value = {"model": "judge"}
     model.with_structured_output.return_value.invoke.side_effect = [
-        {
-            "raw": AIMessage(
+        structured_response(
+            raw=AIMessage(
                 content="grade",
                 usage_metadata={
                     "input_tokens": tokens - 5,
@@ -627,17 +648,14 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
                     "total_tokens": tokens,
                 },
             ),
-            "parsed": {
-                "scores": [
-                    {
-                        "expectation_id": "ideal_answer",
-                        "score": score,
-                        "explanation": "Meaning checked",
-                    }
-                ]
-            },
-            "parsing_error": None,
-        }
+            scores=[
+                {
+                    "expectation_id": "ideal_answer",
+                    "score": score,
+                    "explanation": "Meaning checked",
+                }
+            ],
+        )
         for tokens, score in [(25, 5), (35, "invalid")]
     ]
     monkeypatch.setattr(

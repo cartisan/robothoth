@@ -13,6 +13,13 @@ from src.evaluation.reporting import (
 
 def render_repeat(result: dict[str, Any]) -> str:
     """Render a one-repeat report with its computed aggregate counts."""
+    result = {
+        "elapsed_seconds": 0.0,
+        "candidate_tokens": None,
+        "judge_tokens": None,
+        "total_tokens": None,
+        **result,
+    }
     report = {
         "run_id": "example-run",
         "case_ids": [result["case_id"]],
@@ -151,7 +158,6 @@ def test_summary_distinguishes_errors_from_scored_failures(
         ("judge_error", [30], {"usage_metadata": {"total_tokens": 15}}, 30, 15, 45),
         ("harness_error", [20, None], None, None, 0, None),
         ("harness_error", [], None, 0, 0, 0),
-        ("harness_error", None, None, None, 0, None),
         ("judge_error", [20], None, 20, None, None),
         ("passed", [20], {"usage_metadata": None}, 20, None, None),
         ("passed", [20], {"usage_metadata": {"total_tokens": True}}, 20, None, None),
@@ -160,7 +166,7 @@ def test_summary_distinguishes_errors_from_scored_failures(
 )
 def test_repeat_cost_counts_both_models_and_preserves_unknown_usage(
     status: str,
-    candidate_usage: list[int | None] | None,
+    candidate_usage: list[int | None],
     raw_judge: Any,
     candidate_tokens: int | None,
     judge_tokens: int | None,
@@ -169,9 +175,7 @@ def test_repeat_cost_counts_both_models_and_preserves_unknown_usage(
     usage = repeat_token_usage(
         result={
             "status": status,
-            "trace": {"calls": [{"total_tokens": value} for value in candidate_usage]}
-            if candidate_usage is not None
-            else None,
+            "trace": {"calls": [{"total_tokens": value} for value in candidate_usage]},
             "raw_judge_response": raw_judge,
         }
     )

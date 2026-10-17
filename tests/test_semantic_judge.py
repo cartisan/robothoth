@@ -6,7 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage
-from pydantic import SecretStr
+from langchain_core.outputs import ChatGeneration, ChatResult
+from pydantic import SecretStr, ValidationError
 
 from src.evaluation.config import EvaluationConfig
 from src.evaluation.judge import (
@@ -29,15 +30,26 @@ def score(
     return {"expectation_id": key, "score": value, "explanation": explanation}
 
 
+def structured_response(raw: AIMessage, scores: Any) -> dict[str, Any]:
+    """Return the validated result or parsing error supplied by LangChain."""
+    try:
+        parsed = JudgeResponse.model_validate(obj={"scores": scores})
+    except ValidationError as error:
+        return {"raw": raw, "parsed": None, "parsing_error": error}
+    return {
+        "raw": raw,
+        "parsed": parsed,
+        "parsing_error": None,
+    }
+
+
 def configured_judge(scores: Any) -> tuple[SemanticJudge, MagicMock, AIMessage]:
     model = MagicMock()
     raw = AIMessage(content="raw evidence")
-    model.with_structured_output.return_value.invoke.return_value = {
-        "raw": raw,
-        "parsed": {"scores": scores},
-        "parsing_error": None,
-    }
-    return SemanticJudge(model), model, raw
+    model.with_structured_output.return_value.invoke.return_value = structured_response(
+        raw=raw, scores=scores
+    )
+    return SemanticJudge(model=model), model, raw
 
 
 def test_semantic_input_boundaries_and_expectation_order() -> None:
@@ -54,7 +66,9 @@ def test_semantic_input_boundaries_and_expectation_order() -> None:
         "answer_criteria[0]",
     ]
     assert grade.raw_response is raw
-    messages = model.with_structured_output.return_value.invoke.call_args.args[0]
+    messages = model.with_structured_output.return_value.invoke.call_args.kwargs[
+        "input"
+    ]
     assert messages[0].content == DEFAULT_JUDGE_PROMPT.text
     payload = json.loads(messages[1].content)
     assert payload == {
@@ -65,8 +79,8 @@ def test_semantic_input_boundaries_and_expectation_order() -> None:
             {"expectation_id": "answer_criteria[0]", "requirement": "Concise"},
         ],
     }
-    assert model.with_structured_output.call_args.args[0] is JudgeResponse
     assert model.with_structured_output.call_args.kwargs == {
+        "schema": JudgeResponse,
         "method": "json_schema",
         "include_raw": True,
     }
@@ -163,11 +177,10 @@ def test_invalid_inputs_never_invoke_judge() -> None:
 def test_custom_versioned_prompt_and_binding_options() -> None:
     prompt = SystemPrompt(version=2, text="Custom grading rubric")
     model = MagicMock()
-    model.with_structured_output.return_value.invoke.return_value = {
-        "raw": AIMessage(content="grade"),
-        "parsed": {"scores": [score(), score(key="answer_criteria[0]")]},
-        "parsing_error": None,
-    }
+    model.with_structured_output.return_value.invoke.return_value = structured_response(
+        raw=AIMessage(content="grade"),
+        scores=[score(), score(key="answer_criteria[0]")],
+    )
     judge = SemanticJudge(
         model=model,
         prompt=prompt,
@@ -175,7 +188,9 @@ def test_custom_versioned_prompt_and_binding_options() -> None:
     )
     assert judge.prompt == prompt
     judge.grade(request="Q", final_answer="A", ground_truth=TRUTH)
-    messages = model.with_structured_output.return_value.invoke.call_args.args[0]
+    messages = model.with_structured_output.return_value.invoke.call_args.kwargs[
+        "input"
+    ]
     assert messages[0].content == prompt.text
     assert judge.structured_output_kwargs["method"] == "function_calling"
     with pytest.raises(ValueError):
@@ -217,6 +232,53 @@ def test_real_provider_structured_output_binding_without_api(
         assert judge.structured_output_kwargs["strict"] is True
 
 
+@pytest.mark.parametrize(
+    argnames="provider,model_name",
+    argvalues=[("openai", "gpt-6.1-sol"), ("anthropic", "claude-haiku-5-5")],
+)
+@pytest.mark.parametrize(argnames="score_value", argvalues=[4, "4"])
+def test_provider_parser_validates_scores_before_grading(
+    provider: str,
+    model_name: str,
+    score_value: int | str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise real provider parsing with scripted API responses and no network."""
+    monkeypatch.setenv(name="OPENAI_API_KEY", value="test")
+    monkeypatch.setenv(name="ANTHROPIC_API_KEY", value="test")
+    config = EvaluationConfig.model_validate(
+        obj={"judge": {"provider": provider, "model": model_name}}
+    )
+    judge = SemanticJudge(
+        model=config.judge.create_model(),
+        structured_output_kwargs={"method": "function_calling"},
+    )
+    response = AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": "JudgeResponse",
+                "id": "grade",
+                "args": {"scores": [score(value=score_value)]},
+            }
+        ],
+    )
+
+    def generate(self: Any, messages: Any, **kwargs: Any) -> ChatResult:
+        """Return the scripted provider response as a LangChain generation."""
+        return ChatResult(generations=[ChatGeneration(message=response)])
+
+    monkeypatch.setattr(target=type(judge.model), name="_generate", value=generate)
+    truth = GroundTruth(ideal_answer="A")
+    if isinstance(score_value, str):
+        with pytest.raises(expected_exception=JudgeError) as caught:
+            judge.grade(request="Q", final_answer="A", ground_truth=truth)
+        assert caught.value.raw_response.tool_calls == response.tool_calls
+    else:
+        grade = judge.grade(request="Q", final_answer="A", ground_truth=truth)
+        assert grade.scores[0].score == score_value
+
+
 def test_default_judge_model_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test")
     judge = SemanticJudge()
@@ -236,26 +298,6 @@ def test_default_candidate_uses_medium_reasoning(
     assert candidate.use_responses_api is True  # type: ignore[attr-defined]
 
 
-@pytest.mark.parametrize(
-    "response",
-    [
-        "not structured",
-        {"scores": []},
-        {"parsed": {"scores": []}},
-        {"raw": AIMessage(content="malformed"), "parsed": {"scores": [], "extra": 1}},
-    ],
-)
-def test_malformed_wrappers_preserve_available_evidence(response: Any) -> None:
-    judge, model, _ = configured_judge([])
-    model.with_structured_output.return_value.invoke.return_value = response
-    with pytest.raises(JudgeError) as caught:
-        judge.grade("Q", "A", TRUTH)
-    expected_raw = (
-        response.get("raw", response) if isinstance(response, dict) else response
-    )
-    assert caught.value.raw_response is expected_raw
-
-
 def test_binding_failure_chains_error() -> None:
     judge, model, _ = configured_judge([])
     error = ValueError("unsupported binding")
@@ -266,18 +308,17 @@ def test_binding_failure_chains_error() -> None:
     assert caught.value.raw_response is None
 
 
-def test_parsed_pydantic_results_are_revalidated() -> None:
-    judge, model, _ = configured_judge([])
+def test_parsed_pydantic_results_retain_validated_scores() -> None:
+    judge, model, _ = configured_judge(scores=[])
     parsed = JudgeResponse.model_validate(
-        {
-            "scores": [score(), score("answer_criteria[0]", 5)],
+        obj={
+            "scores": [score(), score(key="answer_criteria[0]", value=5)],
         }
     )
     model.with_structured_output.return_value.invoke.return_value["parsed"] = parsed
-    assert judge.grade("Q", "A", TRUTH).scores[0].score == 4
-    parsed.scores[0].score = True
-    with pytest.raises(JudgeError):
-        judge.grade("Q", "A", TRUTH)
+    grade = judge.grade(request="Q", final_answer="A", ground_truth=TRUTH)
+    assert grade.scores == tuple(parsed.scores)
+    assert grade.scores[0] is parsed.scores[0]
 
 
 def test_provider_configuration_preserves_options_and_excludes_credentials(

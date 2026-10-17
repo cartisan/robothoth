@@ -108,7 +108,7 @@ def _sum_tokens(records: list[dict[str, Any]], field: str) -> int | None:
     """
     total = 0
     for record in records:
-        value = record.get(field)
+        value = record[field]
         if value is None:
             return None
         total += value
@@ -124,11 +124,8 @@ def repeat_token_usage(result: dict[str, Any]) -> dict[str, int | None]:
     usage makes that component and the combined total unknown, while known
     components remain available. Cost follows Trace's token unit, not currency.
     """
-    trace = result["trace"]
-    candidate_tokens = (
-        _sum_tokens(records=trace["calls"], field="total_tokens")
-        if trace is not None
-        else None
+    candidate_tokens = _sum_tokens(
+        records=result["trace"]["calls"], field="total_tokens"
     )
     judge_tokens: int | None = 0
     if result["status"] != "harness_error":
@@ -218,15 +215,15 @@ def _token_text(tokens: int | None) -> str:
 def _cost_text(metrics: dict[str, Any]) -> str:
     """Display combined cost with separate candidate and judge token costs."""
     return (
-        f"{_token_text(tokens=metrics.get('total_tokens'))} "
-        f"(candidate: {_token_text(tokens=metrics.get('candidate_tokens'))}; "
-        f"judge: {_token_text(tokens=metrics.get('judge_tokens'))})"
+        f"{_token_text(tokens=metrics['total_tokens'])} "
+        f"(candidate: {_token_text(tokens=metrics['candidate_tokens'])}; "
+        f"judge: {_token_text(tokens=metrics['judge_tokens'])})"
     )
 
 
-def _time_text(seconds: float | None) -> str:
-    """Display elapsed wall time in seconds, or unknown for reports without timing."""
-    return "unknown" if seconds is None else f"{seconds:.3f} s"
+def _time_text(seconds: float) -> str:
+    """Display elapsed wall time in seconds."""
+    return f"{seconds:.3f} s"
 
 
 def _repeat_markdown(result: dict[str, Any]) -> list[str]:
@@ -243,7 +240,7 @@ def _repeat_markdown(result: dict[str, Any]) -> list[str]:
         f"### {case_id}, repeat {result['repeat']}: {result['status']}",
         "",
         f"Cost: {_cost_text(metrics=result)}",
-        f"Time: {_time_text(seconds=result.get('elapsed_seconds'))}",
+        f"Time: {_time_text(seconds=result['elapsed_seconds'])}",
         "",
         "Trace validation:",
         "",
@@ -321,7 +318,7 @@ def summary_markdown(report: dict[str, Any]) -> str:
         f"judge: {total['judge_errors']})",
         f"Pass rate: {_rate(summary=total)}",
         f"Total cost: {_cost_text(metrics=total)}",
-        f"Total time: {_time_text(seconds=report.get('elapsed_seconds'))}",
+        f"Total time: {_time_text(seconds=report['elapsed_seconds'])}",
         "",
         "| Case | Passed / scored | Pass rate | Completed | Errors |",
         "| --- | --- | --- | --- | --- |",
@@ -372,6 +369,7 @@ def _atomic_write(path: Path, content: str) -> None:
 def save_report(directory: Path, report: dict[str, Any]) -> None:
     """Atomically update report.json and summary.md from the same run snapshot.
 
+    The report contains JSON-compatible fields produced by the runner.
     Each file replacement is atomic; readers may briefly see different revisions
     of the two files. JSON is the authoritative artifact.
 
@@ -381,6 +379,6 @@ def save_report(directory: Path, report: dict[str, Any]) -> None:
     refresh_summary(report)
     _atomic_write(
         directory / "report.json",
-        json.dumps(json_value(report), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(obj=report, ensure_ascii=False, indent=2) + "\n",
     )
     _atomic_write(directory / "summary.md", summary_markdown(report))

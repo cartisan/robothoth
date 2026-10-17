@@ -164,7 +164,7 @@ def _execute(
     for _ in range(max_api_calls):
         started = perf_counter()
         try:
-            response = bound.invoke(list(messages))
+            response = bound.invoke(input=messages)
         except Exception:
             trace.record_failure(label, perf_counter() - started)
             raise
