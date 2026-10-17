@@ -32,3 +32,6 @@ dist/
 /.idea/pyLspTools.xml
 /.idea/robothoth.iml
 /.idea/vcs.xml
+
+# evaluation results
+evaluation_runs/*

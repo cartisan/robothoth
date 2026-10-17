@@ -6,7 +6,9 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 
 import src.main as examples
+from src.harness import HarnessResult
 from src.tools.registry import registry
+from src.tracing import Trace
 
 
 @pytest.mark.parametrize(
@@ -24,14 +26,14 @@ def test_example_binds_tools(
     monkeypatch.setenv(key, "test-key")
     bound_models: list[BaseChatModel] = []
 
-    def check_binding(model: BaseChatModel, **kwargs: Any) -> str:
+    def check_binding(model: BaseChatModel, **kwargs: Any) -> HarnessResult:
         """Capture the model after its registry schemas bind successfully."""
         model.bind_tools(
             registry.tool_definitions(),
             **(kwargs.get("tool_binding_kwargs") or {}),
         )
         bound_models.append(model)
-        return "Done"
+        return HarnessResult("Done", Trace())
 
     monkeypatch.setattr(examples, "run_in_harness", check_binding)
     getattr(examples, method)()

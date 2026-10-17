@@ -17,7 +17,7 @@ from pydantic import Field
 
 import src.harness as harness
 from src.tools.registry import registry
-from src.tracing import Trace
+from src.utils import SystemPrompt
 
 
 class ScriptedChatModel(BaseChatModel):
@@ -43,6 +43,8 @@ class ScriptedChatModel(BaseChatModel):
         """Capture normalized declarations and binding options for this model."""
         self.declarations = [convert_to_openai_tool(tool) for tool in tools]
         self.binding_kwargs = kwargs
+        if tool_choice is not None:
+            self.binding_kwargs["tool_choice"] = tool_choice
         return self
 
     def _generate(
@@ -98,18 +100,15 @@ def test_rounds_preserve_messages_results_and_usage(
     monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
     ticks = iter([1.0, 3.0, 100.0, 103.0])
     monkeypatch.setattr(harness, "perf_counter", lambda: next(ticks))
-    trace = Trace()
-    assert (
-        harness.run_in_harness(
-            model,
-            user_prompt="Find",
-            vault_path="vault",
-            trace=trace,
-            model_label="requested",
-            tool_binding_kwargs={"strict": True},
-        )
-        == "Done"
+    result = harness.run_in_harness(
+        model,
+        user_prompt="Find",
+        vault_path="vault",
+        model_label="requested",
+        tool_binding_kwargs={"strict": True},
     )
+    assert result.final_answer == "Done"
+    trace = result.trace
     assert model.binding_kwargs == {"strict": True}
     assert len(model.declarations) == len(registry.tool_definitions())
     assert model.declarations[0]["function"] == registry.tool_definitions()[0]
@@ -153,13 +152,9 @@ def test_malformed_arguments_reach_dispatcher(monkeypatch: pytest.MonkeyPatch) -
     output = '{"ok":false,"error":{"code":"invalid_arguments"}}'
     dispatcher = MagicMock(return_value=output)
     monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
-    trace = Trace()
-    assert (
-        harness.run_in_harness(
-            model, user_prompt="Find", vault_path="vault", trace=trace
-        )
-        == "Done"
-    )
+    result = harness.run_in_harness(model, user_prompt="Find", vault_path="vault")
+    assert result.final_answer == "Done"
+    trace = result.trace
     dispatcher.assert_called_once_with(
         name="list_notes", arguments_json="{", vault_path="vault"
     )
@@ -185,13 +180,9 @@ def test_mixed_calls_follow_raw_order(monkeypatch: pytest.MonkeyPatch) -> None:
     model = ScriptedChatModel(responses=[first, AIMessage(content="Done")])
     dispatcher = MagicMock(side_effect=["bad result", "good result"])
     monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
-    trace = Trace()
-    assert (
-        harness.run_in_harness(
-            model, user_prompt="Find", vault_path="vault", trace=trace
-        )
-        == "Done"
-    )
+    result = harness.run_in_harness(model, user_prompt="Find", vault_path="vault")
+    assert result.final_answer == "Done"
+    trace = result.trace
     assert [call.name for call in trace.calls[0].tool_calls] == [
         "read_note",
         "list_notes",
@@ -230,14 +221,9 @@ def test_mixed_responses_calls_match_call_ids(monkeypatch: pytest.MonkeyPatch) -
     model = ScriptedChatModel(responses=[first, AIMessage(content="Done")])
     dispatcher = MagicMock(side_effect=["bad result", "good result"])
     monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
-    trace = Trace()
-
-    assert (
-        harness.run_in_harness(
-            model, user_prompt="Find", vault_path="vault", trace=trace
-        )
-        == "Done"
-    )
+    result = harness.run_in_harness(model, user_prompt="Find", vault_path="vault")
+    assert result.final_answer == "Done"
+    trace = result.trace
     assert [call.call_id for call in trace.calls[0].tool_calls] == [
         "bad-call",
         "good-call",
@@ -268,7 +254,7 @@ def test_mixed_responses_calls_match_call_ids(monkeypatch: pytest.MonkeyPatch) -
     "response",
     [
         AIMessage(content="Partial", response_metadata={"finish_reason": "length"}),
-    AIMessage(content="Partial", response_metadata={"status": "incomplete"}),
+        AIMessage(content="Partial", response_metadata={"status": "incomplete"}),
         AIMessage(content="Partial", response_metadata={"stop_reason": "max_tokens"}),
         AIMessage(content="Partial", additional_kwargs={"refusal": "No"}),
         AIMessage(content=[{"type": "image", "url": "unsupported"}]),
@@ -299,36 +285,38 @@ def test_invalid_response_traced_before_rejection(
     """Trace invalid responses without dispatching their requested tools."""
     dispatcher = MagicMock()
     monkeypatch.setattr(harness.registry, "dispatch", dispatcher)
-    trace = Trace()
-    with pytest.raises(RuntimeError):
-        harness.run_in_harness(
-            ScriptedChatModel(responses=[response]),
-            user_prompt="Find",
-            vault_path="vault",
-            trace=trace,
-        )
-    assert len(trace.calls) == 1
+    with pytest.raises(harness.HarnessError) as caught:
+        harness.run_in_harness(ScriptedChatModel(responses=[response]), "Find", "vault")
+    assert len(caught.value.trace.calls) == 1
+    assert isinstance(caught.value.__cause__, RuntimeError)
     dispatcher.assert_not_called()
 
 
-def test_run_isolation_and_call_limit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep histories separate and execute last allowed tool calls."""
+def test_run_isolation_custom_prompt_and_call_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep traces and histories separate and execute last allowed tool calls."""
     model = ScriptedChatModel(
         responses=[AIMessage(content="Done"), AIMessage(content="Done")]
     )
-    trace = Trace()
-    for prompt in ("First", "Second"):
-        assert (
-            harness.run_in_harness(
-                model, user_prompt=prompt, vault_path="vault", trace=trace
-            )
-            == "Done"
+    results = [
+        harness.run_in_harness(
+            chat_model=model,
+            user_prompt=prompt,
+            vault_path="vault",
+            system_prompt=SystemPrompt(version=2, text="Custom instructions"),
         )
+        for prompt in ("First", "Second")
+    ]
     assert [request[1].content for request in model.requests] == ["First", "Second"]
-    assert len(trace.calls) == 2
-    assert trace.initial_request is not None and 'user: "Second"' in str(
-        trace.initial_request
+    assert all(len(request) == 2 for request in model.requests)
+    assert all(
+        request[0].content == "Custom instructions" for request in model.requests
     )
+    assert results[0].trace is not results[1].trace
+    assert all(len(result.trace.calls) == 1 for result in results)
+    initial = results[0].trace.initial_request
+    assert initial is not None and "Custom instructions" in str(initial)
 
     model = ScriptedChatModel(
         responses=[
@@ -338,46 +326,58 @@ def test_run_isolation_and_call_limit(monkeypatch: pytest.MonkeyPatch) -> None:
         ]
     )
     monkeypatch.setattr(harness.registry, "dispatch", MagicMock(return_value="saved"))
-    limited = Trace()
-    with pytest.raises(RuntimeError, match=r"call limit \(1\) reached"):
-        harness.run_in_harness(
-            model,
-            user_prompt="Find",
-            vault_path="vault",
-            trace=limited,
-            max_api_calls=1,
-        )
-    assert limited.calls[0].tool_calls[0].output == "saved"
+    with pytest.raises(
+        harness.HarnessError, match=r"call limit \(1\) reached"
+    ) as caught:
+        harness.run_in_harness(model, "Find", "vault", max_api_calls=1)
+    assert caught.value.trace.calls[0].tool_calls[0].output == "saved"
     assert len(model.requests) == 1
 
 
-@pytest.mark.parametrize("limit", [0, -1])
+@pytest.mark.parametrize(argnames="limit", argvalues=[0, -1])
 def test_invalid_limit_has_no_side_effect(limit: int) -> None:
-    """Reject invalid limits before tool binding or trace mutation."""
+    """Reject invalid limits before tool binding or invocation."""
     model = ScriptedChatModel(responses=[])
-    trace = Trace()
-    trace.record_initial_request(
-        model="old",
-        tools=[],
-        messages=[],
-        tool_binding_kwargs={},
-        prompt_messages=[("user", "Old")],
-    )
-    initial = trace.initial_request
-    with pytest.raises(ValueError, match="positive"):
+    with pytest.raises(expected_exception=ValueError, match="positive"):
         harness.run_in_harness(
-            model,
+            chat_model=model,
             user_prompt="Find",
             vault_path="vault",
-            trace=trace,
             max_api_calls=limit,
         )
     assert model.declarations == []
-    assert trace.initial_request is initial
+    assert model.requests == []
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"user_prompt": " "},
+        {"vault_path": ""},
+        {"model_label": ""},
+    ],
+)
+def test_invalid_arguments_rejected_before_binding(changes: dict[str, Any]) -> None:
+    model = MagicMock()
+    arguments = {"user_prompt": "Find", "vault_path": "vault", **changes}
+    with pytest.raises(ValueError):
+        harness.run_in_harness(model, **arguments)
+    model.bind_tools.assert_not_called()
+
+
+def test_binding_failure_retains_initial_request() -> None:
+    error = ValueError("cannot bind")
+    model = MagicMock()
+    model.bind_tools.side_effect = error
+    with pytest.raises(harness.HarnessError) as caught:
+        harness.run_in_harness(model, "Find", "vault")
+    assert caught.value.__cause__ is error
+    assert caught.value.trace.initial_request is not None
+    assert caught.value.trace.calls == []
 
 
 def test_invocation_and_dispatch_failures(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Preserve prior usage and partial tool outputs on exact exceptions."""
+    """Preserve prior usage and partial tool outputs with chained exceptions."""
     error = ConnectionError("offline")
     first = AIMessage(
         content="",
@@ -386,16 +386,10 @@ def test_invocation_and_dispatch_failures(monkeypatch: pytest.MonkeyPatch) -> No
     )
     model = ScriptedChatModel(responses=[first, error])
     monkeypatch.setattr(harness.registry, "dispatch", MagicMock(return_value="saved"))
-    trace = Trace()
-    with pytest.raises(ConnectionError) as raised:
-        harness.run_in_harness(
-            model,
-            user_prompt="Find",
-            vault_path="vault",
-            trace=trace,
-            model_label="requested",
-        )
-    assert raised.value is error
+    with pytest.raises(harness.HarnessError) as raised:
+        harness.run_in_harness(model, "Find", "vault", model_label="requested")
+    assert raised.value.__cause__ is error
+    trace = raised.value.trace
     assert trace.calls[0].tool_calls[0].output == "saved"
     assert trace.calls[1].model == "requested"
     assert trace.calls[1].response_id is None
@@ -416,10 +410,25 @@ def test_invocation_and_dispatch_failures(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(
         harness.registry, "dispatch", MagicMock(side_effect=["saved", failure])
     )
-    trace = Trace()
-    with pytest.raises(OSError) as dispatch_raised:
+    with pytest.raises(harness.HarnessError) as raised:
+        harness.run_in_harness(model, "Find", "vault")
+    assert raised.value.__cause__ is failure
+    assert [call.output for call in raised.value.trace.calls[0].tool_calls] == [
+        "saved",
+        None,
+    ]
+
+
+def test_non_ai_response_records_failure() -> None:
+    model = MagicMock()
+    model.bind_tools.return_value.invoke.return_value = "unexpected"
+    with pytest.raises(harness.HarnessError, match="AIMessage") as caught:
+        harness.run_in_harness(model, "Find", "vault")
+    assert len(caught.value.trace.calls) == 1
+
+
+def test_whitespace_answer_is_invalid() -> None:
+    with pytest.raises(harness.HarnessError):
         harness.run_in_harness(
-            model, user_prompt="Find", vault_path="vault", trace=trace
+            ScriptedChatModel(responses=[AIMessage(content=" ")]), "Find", "vault"
         )
-    assert dispatch_raised.value is failure
-    assert [call.output for call in trace.calls[0].tool_calls] == ["saved", None]

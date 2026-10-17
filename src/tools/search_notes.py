@@ -36,9 +36,7 @@ def search_notes(vault_path: str, query: str) -> list[str]:
     """Return sorted Markdown paths whose UTF-8 content matches ``query``.
 
     ``query`` is compiled as a case-insensitive Python regular expression and
-    each matching note is returned once, relative to the vault root. Compilation
-    and scanning run in an isolated process with a total execution budget of
-    ``SEARCH_TIMEOUT_SECONDS``, including worker startup.
+    each matching note is returned once, relative to the vault root.
 
     Args:
         query: Case-insensitive Python regular expression to match note content.

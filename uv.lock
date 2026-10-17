@@ -1004,6 +1004,7 @@ dependencies = [
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
     { name = "langchain-openai" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
 ]
 
@@ -1020,6 +1021,7 @@ requires-dist = [
     { name = "langchain-anthropic", specifier = ">=1.0.0" },
     { name = "langchain-core", specifier = ">=1.6.7" },
     { name = "langchain-openai", specifier = ">=1.6.7" },
+    { name = "pydantic", specifier = ">=2,<3" },
     { name = "python-dotenv", specifier = "==1.2.3" },
 ]
 

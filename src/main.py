@@ -11,38 +11,40 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from src.harness import run_in_harness
-from src.tracing import Trace
+from src.harness import HarnessError, run_in_harness
 
 VAULT_PATH = str(Path(__file__).resolve().parents[1] / "tests/test_vault")
 EXAMPLE_PROMPT = (
-    "Help me locate the file called 'Agentic Software Engineering Factory'."
+    # "Help me locate the file called 'Agentic Software Engineering Factory'."
+    "According to the Golden Evaluation Dataset note, summarize in a few sentences "
+    "what makes a good evaluation dataset?"
 )
 
 
 def _execute(model: BaseChatModel, **kwargs: Any) -> None:
     """Print the bundled vault answer and trace for a configured chat model.
 
-    Keyword arguments are passed to the harness. The invocation trace is printed
-    even if the harness fails.
+    Keyword arguments are passed to the harness. The available invocation trace
+    is printed on completion or operational failure.
 
     Raises:
         Exception: If model invocation or the harness fails.
     """
-    trace = Trace()
     try:
-        answer = run_in_harness(
+        result = run_in_harness(
             model,
             user_prompt=EXAMPLE_PROMPT,
             vault_path=VAULT_PATH,
-            trace=trace,
             **kwargs,
         )
+    except HarnessError as exc:
+        print(exc.trace)
+        raise
+    else:
         print("Final output:")
-        print(answer)
-    finally:
+        print(result.final_answer)
         print()
-        print(trace)
+        print(result.trace)
 
 
 def execute_openai() -> None:
@@ -55,7 +57,8 @@ def execute_openai() -> None:
     """
     load_dotenv()
     _execute(
-        ChatOpenAI(model="gpt-6-luna"),
+        # ChatOpenAI(model="gpt-6-luna"),
+        ChatOpenAI(model="gpt-6.1-sol", reasoning_effort="high"),
         model_label="gpt-6-luna",
         tool_binding_kwargs={"strict": True},
     )

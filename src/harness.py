@@ -1,5 +1,6 @@
 """Run vault tool conversations with LangChain chat models."""
 
+from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
 
@@ -14,27 +15,47 @@ from langchain_core.messages import (
 
 from src.tools.registry import registry
 from src.tracing import Trace, message_text, message_tool_calls
+from src.utils import SystemPrompt
 
-SYSTEM_PROMPT = """You are an assistant that helps navigate an Obsidian note vault.
+SYSTEM_PROMPT = SystemPrompt(
+    version=1,
+    text="""You are an assistant that helps navigate an Obsidian note vault.
 The vault is located under a vault path on the local machine,
 and is managed by your harness.
 You only need to operate on file paths relative to that vault path.
 
 Help the user with the following query:
-"""
+""",
+)
+
+
+@dataclass(frozen=True)
+class HarnessResult:
+    """Retain a valid final answer and the fresh trace belonging to its run."""
+
+    final_answer: str
+    trace: Trace
+
+
+class HarnessError(RuntimeError):
+    """Retain a failed run's partial trace and chained operational exception."""
+
+    def __init__(self, message: str, trace: Trace) -> None:
+        """Expose the available trace even when binding or execution fails."""
+        super().__init__(message)
+        self.trace = trace
 
 
 def run_in_harness(
     chat_model: BaseChatModel,
-    *,
     user_prompt: str,
     vault_path: str,
-    trace: Trace,
+    system_prompt: SystemPrompt = SYSTEM_PROMPT,
     max_api_calls: int = 20,
     model_label: str | None = None,
     tool_binding_kwargs: dict[str, Any] | None = None,
-) -> str:
-    """Return final assistant text after resolving registered vault tool calls.
+) -> HarnessResult:
+    """Return final assistant text and its independent invocation trace.
 
     Each run binds the registry tools and owns its conversation history. Tool
     outputs, including error envelopes, are returned exactly as ToolMessages.
@@ -46,7 +67,7 @@ def run_in_harness(
         chat_model: A synchronous LangChain model supporting tool binding.
         user_prompt: The user's vault question.
         vault_path: Root used by registered tools.
-        trace: Collector for request, response, and tool metrics.
+        system_prompt: Versioned instructions replacing the default vault prompt.
         max_api_calls: Maximum model invocations in this run.
         model_label: Label for failed invocations and responses without model
             metadata. Defaults to the chat model's class name.
@@ -54,17 +75,80 @@ def run_in_harness(
             strict=True for supporting models.
 
     Raises:
-        ValueError: If max_api_calls is not positive.
-        RuntimeError: If a response is invalid or the call limit is reached.
-        Exception: Original binding, invocation, and unexpected dispatch errors
-            propagate unchanged.
+        ValueError: If the user prompt, vault path, or a supplied model label are
+            blank, or the invocation limit is not positive.
+            Validation occurs before tool binding or execution.
+        HarnessError: If binding, invocation, dispatch, response validation, or
+            the call limit fails. The error retains the partial trace and chains
+            the original exception.
     """
+    validate_harness_options(
+        user_prompt=user_prompt,
+        vault_path=vault_path,
+        max_api_calls=max_api_calls,
+        model_label=model_label,
+    )
+    trace = Trace()
+    try:
+        return _execute(
+            chat_model=chat_model,
+            user_prompt=user_prompt,
+            vault_path=vault_path,
+            system_prompt=system_prompt,
+            max_api_calls=max_api_calls,
+            model_label=model_label,
+            tool_binding_kwargs=tool_binding_kwargs,
+            trace=trace,
+        )
+    except Exception as exc:
+        raise HarnessError(str(exc), trace) from exc
+
+
+def validate_harness_options(
+    user_prompt: str,
+    vault_path: str,
+    max_api_calls: int,
+    model_label: str | None,
+) -> None:
+    """Accept nonblank conversation text and a positive invocation limit.
+
+    A supplied model label must also be nonblank. Argument types are checked
+    statically by the annotated interface; filesystem access is left to tools.
+
+    Raises:
+        ValueError: If required text or a supplied label is blank, or the
+            invocation limit is not positive.
+    """
+    for name, value in (
+        ("user_prompt", user_prompt),
+        ("vault_path", vault_path),
+    ):
+        if not value.strip():
+            raise ValueError(f"{name} must be nonblank text")
     if max_api_calls <= 0:
-        raise ValueError("max_api_calls must be positive")
+        raise ValueError("max_api_calls must be a positive integer")
+    if model_label is not None and not model_label.strip():
+        raise ValueError("model_label must be nonblank text or None")
+
+
+def _execute(
+    chat_model: BaseChatModel,
+    user_prompt: str,
+    vault_path: str,
+    system_prompt: SystemPrompt,
+    max_api_calls: int,
+    model_label: str | None,
+    tool_binding_kwargs: dict[str, Any] | None,
+    trace: Trace,
+) -> HarnessResult:
+    """Return a completed conversation, retaining partial execution in trace.
+
+    Raises:
+        Exception: If model binding, execution, or response validation fails.
+    """
     tools = registry.tool_definitions()
-    bound = chat_model.bind_tools(tools, **(tool_binding_kwargs or {}))
     messages: list[BaseMessage] = [
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt.text),
         HumanMessage(content=user_prompt),
     ]
     label = model_label or type(chat_model).__name__
@@ -73,8 +157,9 @@ def run_in_harness(
         tools=tools,
         messages=[m.model_dump(mode="json") for m in messages],
         tool_binding_kwargs=tool_binding_kwargs or {},
-        prompt_messages=[("system", SYSTEM_PROMPT), ("user", user_prompt)],
+        prompt_messages=[("system", system_prompt.text), ("user", user_prompt)],
     )
+    bound = chat_model.bind_tools(tools, **(tool_binding_kwargs or {}))
 
     for _ in range(max_api_calls):
         started = perf_counter()
@@ -116,11 +201,11 @@ def run_in_harness(
         ) != len(calls):
             raise RuntimeError("Tool calls require names and unique nonempty IDs")
         if not calls:
-            if not answer:
+            if not answer.strip():
                 raise RuntimeError(
                     "API response contains neither text nor function calls"
                 )
-            return answer
+            return HarnessResult(answer, trace)
         messages.append(response)
         for index, call in enumerate(calls):
             output = registry.dispatch(

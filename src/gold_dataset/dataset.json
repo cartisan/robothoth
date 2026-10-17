@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "search-tool-usage",
+      "request": "Where is the Golden Evaluation Dataset note in this vault?",
+      "added_reason": "Check that notes can be found, and that the list_note tool is used for this",
+      "dataset_version": 1,
+      "ground_truth": {
+        "ideal_answer": "The note is at 2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md."
+      },
+      "tool_checks": {
+        "required_tools": [
+          "list_notes"
+        ],
+        "allowed_tools": [
+          "list_notes"
+        ]
+      }
+    },
+    {
+      "id": "multi-tool-usage",
+      "request": "According to the Golden Evaluation Dataset note, summarize in a few sentences what makes a good evaluation dataset.",
+      "added_reason": "Check that that note content is reproduced correctly and summarization is concise",
+      "dataset_version": 1,
+      "ground_truth": {
+        "ideal_answer": "According to [[Golden Evaluation Dataset]], a good evaluation dataset reflects real user inputs, including edge cases, adversarial examples, long-tail cases, and domain-specific terminology. Each case should have expert-agreed ground truth—either an ideal answer or clear acceptance criteria—and follow a consistent schema that explicitly identifies the failure mode it is meant to catch. The dataset should evolve as new failures emerge, with versioning and a changelog explaining additions. Above all, good data matters more than sophisticated metrics: it defines which problems your evaluation can detect.",
+        "answer_criteria": [
+          "The answer is concise, it contains only a 3-4 sentences."
+        ]
+      },
+      "tool_checks": {
+        "required_tools": [
+          "list_notes",
+          "read_note"
+        ]
+      }
+    },
+    {
+      "id": "multi-note-synthesis",
+      "request": "How would you build and calibrate a rubric-based LLM judge for customer-support chatbot answers, and keep its scores from being skewed by common judge biases?",
+      "added_reason": "Check that multiple note content is integrated by the system.",
+      "dataset_version": 1,
+      "ground_truth": {
+        "ideal_answer": "Define several specific, measurable, nonoverlapping criteria for the chatbot's answers, such as politeness, policy adherence, and correct escalation. Have an LLM judge score each criterion on a Likert scale with anchor examples for the scale's extremes. Calibrate its grades against domain experts using real outcomes, examples, a test set, and a held-out validation set; refine the rubric or judge prompt when they disagree. Reduce position bias by swapping answer order in pairwise comparisons, verbosity bias with a concision criterion, and self-preference bias by using an independent judge family or comparing answers from the same family."
+      },
+      "tool_checks": {
+        "required_note_reads": [
+          "2 areas/ai engineering/evaluation/Rubric Based Evaluation.md",
+          "2 areas/ai engineering/evaluation/LLM-as-a-Judge.md"
+        ]
+      }
+    }
+  ]
+}
