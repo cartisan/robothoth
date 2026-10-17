@@ -98,7 +98,7 @@ def test_translates_io_error_without_exposing_path(
 ) -> None:
     """Hide filesystem error details while preserving the public I/O code."""
 
-    def fail_read(_vault_path: str, notepath: str) -> str:
+    def fail_read(vault_path: str, notepath: str) -> str:
         raise PermissionError("private path")
 
     monkeypatch.setitem(
@@ -132,7 +132,7 @@ def test_translates_unexpected_error_without_exposing_details(
 ) -> None:
     """Hide unexpected exception details from callers while logging them."""
 
-    def fail_read(_vault_path: str, notepath: str) -> str:
+    def fail_read(vault_path: str, notepath: str) -> str:
         raise RuntimeError("private detail")
 
     monkeypatch.setitem(

@@ -28,29 +28,11 @@ class ToolCheckResult:
 
 
 def _successful(call: ToolCallTrace) -> bool:
-    """Recognize only dispatcher success objects with true ok and a result.
+    """Return whether a recorded dispatcher envelope reports success.
 
-    Missing output, malformed JSON, error objects, and truthy substitutes for
-    the boolean true do not count as success.
+    Unexecuted calls have no output and do not count as success.
     """
-    try:
-        output = (
-            json.loads(call.output, object_pairs_hook=_unique_object)
-            if call.output is not None
-            else None
-        )
-    except ValueError, TypeError:
-        return False
-    return (
-        isinstance(output, dict)
-        and set(output) == {"ok", "result"}
-        and output["ok"] is True
-        and isinstance(output["result"], (str, list))
-        and (
-            not isinstance(output["result"], list)
-            or all(isinstance(item, str) for item in output["result"])
-        )
-    )
+    return call.output is not None and json.loads(s=call.output)["ok"]
 
 
 def _read_path(call: ToolCallTrace) -> str | None:
@@ -58,12 +40,12 @@ def _read_path(call: ToolCallTrace) -> str | None:
     if call.name != "read_note":
         return None
     try:
-        arguments = json.loads(call.arguments, object_pairs_hook=_unique_object)
+        arguments = json.loads(s=call.arguments, object_pairs_hook=_unique_object)
         if not isinstance(arguments, dict):
             return None
         path = arguments.get("notepath")
-        return normalize_note_path(path) if isinstance(path, str) else None
-    except ValueError, TypeError:
+        return normalize_note_path(path=path) if isinstance(path, str) else None
+    except ValueError:
         return None
 
 
@@ -96,8 +78,7 @@ def evaluate_tool_checks(
                 tuple(ref for ref, _ in matching),
             )
         )
-    for index, path in enumerate(tool_checks.required_note_reads):
-        expected = normalize_note_path(path)
+    for index, expected in enumerate(tool_checks.required_note_reads):
         matching = [
             (ref, call) for ref, call in attempts if _read_path(call) == expected
         ]

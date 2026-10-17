@@ -1,7 +1,7 @@
 """Capture API requests, responses, tool results, and run metrics."""
 
 import json
-from copy import deepcopy
+from copy import copy, deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -20,7 +20,7 @@ def message_text(message: AIMessage) -> tuple[str, str | None]:
     for block in message.content:
         if isinstance(block, str):
             parts.append(block)
-        elif isinstance(block, dict):
+        else:
             kind = block.get("type")
             if kind in {"text", "output_text"}:
                 parts.append(str(block.get("text", "")))
@@ -33,8 +33,6 @@ def message_text(message: AIMessage) -> tuple[str, str | None]:
                 "function_call",
             }:
                 return "".join(parts), f"Unsupported LangChain content type: {kind}"
-        else:
-            return "".join(parts), "Unsupported LangChain content block"
     return "".join(parts), None
 
 
@@ -48,14 +46,16 @@ def message_tool_calls(message: AIMessage) -> tuple[list["ToolCallTrace"], str |
     """
     calls = [
         ToolCallTrace(
-            c.get("id") or "",
-            c.get("name") or "",
-            json.dumps(c.get("args"), ensure_ascii=False),
+            call_id=c["id"] or "",
+            name=c["name"],
+            arguments=json.dumps(obj=c["args"], ensure_ascii=False),
         )
         for c in message.tool_calls
     ]
     calls.extend(
-        ToolCallTrace(c.get("id") or "", c.get("name") or "", c.get("args") or "")
+        ToolCallTrace(
+            call_id=c["id"] or "", name=c["name"] or "", arguments=c["args"] or ""
+        )
         for c in message.invalid_tool_calls
     )
     raw_calls = message.additional_kwargs.get("tool_calls")
@@ -121,7 +121,7 @@ class RequestTrace:
     def __post_init__(self) -> None:
         """Detach arguments and prompt messages from mutable caller data."""
         object.__setattr__(self, "arguments", deepcopy(self.arguments))
-        object.__setattr__(self, "prompt_messages", deepcopy(self.prompt_messages))
+        object.__setattr__(self, "prompt_messages", copy(x=self.prompt_messages))
 
     def __str__(self) -> str:
         """Return prompt message roles and text in order on one line.
@@ -343,12 +343,12 @@ class Trace:
             model=model if isinstance(model, str) else model_label,
             response_id=response.id,
             elapsed_seconds=elapsed_seconds,
-            input_tokens=usage.get("input_tokens") if usage else None,
-            output_tokens=usage.get("output_tokens") if usage else None,
+            input_tokens=usage["input_tokens"] if usage is not None else None,
+            output_tokens=usage["output_tokens"] if usage is not None else None,
             cached_tokens=input_details.get("cache_read"),
             cache_write_tokens=input_details.get("cache_creation"),
             reasoning_tokens=output_details.get("reasoning"),
-            total_tokens=usage.get("total_tokens") if usage else None,
+            total_tokens=usage["total_tokens"] if usage is not None else None,
             output=output,
             tool_calls=tool_calls,
         )

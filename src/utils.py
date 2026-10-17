@@ -2,7 +2,7 @@
 
 from pathlib import PurePosixPath, PureWindowsPath
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SystemPrompt(BaseModel):
@@ -15,8 +15,8 @@ class SystemPrompt(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
-    version: StrictInt = Field(gt=0)
-    text: StrictStr
+    version: int = Field(gt=0)
+    text: str
 
     @field_validator("text")
     @classmethod
@@ -40,7 +40,7 @@ def normalize_note_path(path: str) -> str:
     Raises:
         ValueError: If path is not a nonempty vault-relative file path.
     """
-    if not isinstance(path, str) or not path.strip() or "\x00" in path:
+    if not path.strip() or "\x00" in path:
         raise ValueError("note path must be nonempty vault-relative text")
     portable = path.replace("\\", "/")
     parts = PurePosixPath(portable)

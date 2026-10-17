@@ -12,6 +12,17 @@ than narrating implementation steps, and keep docstrings consistent with the cod
 Prefer positional-or-keyword parameters over keyword-only `*` parameters unless
 the interface has a concrete need to require keyword arguments.
 
+# Validation and defensive coding
+
+Validate untrusted data at its boundary, then trust validated models, annotated
+internal interfaces, and invariants established by the caller. Do not dump and
+revalidate model instances, repeat normalization, check types already guaranteed
+by parsing or schemas, or supply fallbacks for required internal fields. Let
+programming errors surface instead of silently treating them as missing data.
+Keep checks for meaningful value constraints, external responses, filesystem
+boundaries, and operational failures. Copy mutable data only when mutation or
+snapshot ownership requires it.
+
 # Function and method calls
 
 Always use explicit keyword arguments for all function and method calls.

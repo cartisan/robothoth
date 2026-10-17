@@ -25,7 +25,7 @@ def _search_worker(vault_root: Path, query: str, output: Connection) -> None:
                 continue
             if pattern.search(note.read_text(encoding="utf-8")):
                 matches.append(note.relative_to(vault_root).as_posix())
-        output.send(sorted(set(matches)))
+        output.send(obj=sorted(matches))
     except Exception as error:
         output.send(error)
     finally:

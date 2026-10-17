@@ -41,26 +41,22 @@ def test_order_independence_repeated_attempts_and_evidence() -> None:
 
 
 @pytest.mark.parametrize(
-    "output",
-    [
-        None,
-        "",
-        "{",
-        "[]",
-        '{"ok":false,"error":{"code":"not_found"}}',
-        '{"ok":1,"result":[]}',
-        '{"ok":"true","result":[]}',
-        '{"ok":true}',
-        '{"ok":true,"result":[],"error":{}}',
-        '{"ok":true,"result":null}',
-        '{"ok":false,"ok":true,"result":[]}',
+    argnames="output,passed",
+    argvalues=[
+        (None, False),
+        ('{"ok":false,"error":{"code":"not_found","message":"Missing"}}', False),
+        ('{"ok":true,"result":[]}', True),
+        ('{"ok":true,"result":""}', True),
     ],
 )
-def test_required_tools_need_dispatcher_success(output: str | None) -> None:
+def test_required_tools_need_dispatcher_success(
+    output: str | None, passed: bool
+) -> None:
     checks = evaluate_tool_checks(
-        ToolChecks(required_tools=["read_note"]), traced(attempt("read_note", output))
+        tool_checks=ToolChecks(required_tools=["read_note"]),
+        trace=traced(attempt(name="read_note", output=output)),
     )
-    assert not checks[0].passed
+    assert checks[0].passed is passed
     assert len(checks[0].calls) == 1
 
 

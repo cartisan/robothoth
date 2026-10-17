@@ -58,7 +58,7 @@ def validate_evaluation_inputs(
         DatasetValidationError: If any dataset entry is invalid.
         OSError: If the dataset cannot be read.
     """
-    if type(repeats) is not int or repeats <= 0:
+    if repeats <= 0:
         raise ValueError("repeats must be a positive integer")
     validate_harness_options(
         user_prompt="evaluation request",
@@ -135,7 +135,8 @@ def run_evaluation(
         ValueError: If batch setup or harness arguments are invalid.
         DatasetValidationError: If the entire dataset fails validation.
         OSError: If the dataset or report files cannot be read or written.
-        Exception: If default judge configuration fails before the run starts.
+        Exception: If default judge configuration fails, or an unexpected error
+            escapes the harness or judge interface.
     """
     suite_started = perf_counter()
     started = _now()
@@ -207,21 +208,22 @@ def run_evaluation(
             }
             try:
                 harness_result = run_in_harness(
-                    candidate_model,
-                    case.request,
-                    str(vault_path),
-                    system_prompt,
-                    max_api_calls,
-                    model_label,
-                    tool_binding_kwargs,
+                    chat_model=candidate_model,
+                    user_prompt=case.request,
+                    vault_path=str(object=vault_path),
+                    system_prompt=system_prompt,
+                    max_api_calls=max_api_calls,
+                    model_label=model_label,
+                    tool_binding_kwargs=tool_binding_kwargs,
                 )
-            except Exception as exc:
-                result["error"] = _error_record(exc)
-                if isinstance(exc, HarnessError):
-                    result["trace"] = json_value(exc.trace)
-                    result["tool_checks"] = json_value(
-                        evaluate_tool_checks(case.tool_checks, exc.trace)
+            except HarnessError as exc:
+                result["error"] = _error_record(exc=exc)
+                result["trace"] = json_value(value=exc.trace)
+                result["tool_checks"] = json_value(
+                    value=evaluate_tool_checks(
+                        tool_checks=case.tool_checks, trace=exc.trace
                     )
+                )
             else:
                 result["final_answer"] = harness_result.final_answer
                 result["trace"] = json_value(harness_result.trace)
@@ -229,15 +231,14 @@ def run_evaluation(
                 result["tool_checks"] = json_value(checks)
                 try:
                     grade = evaluator.grade(
-                        case.request,
-                        harness_result.final_answer,
-                        case.ground_truth,
+                        request=case.request,
+                        final_answer=harness_result.final_answer,
+                        ground_truth=case.ground_truth,
                     )
-                except Exception as exc:
+                except JudgeError as exc:
                     result["status"] = "judge_error"
-                    result["error"] = _error_record(exc)
-                    if isinstance(exc, JudgeError):
-                        result["raw_judge_response"] = json_value(exc.raw_response)
+                    result["error"] = _error_record(exc=exc)
+                    result["raw_judge_response"] = json_value(value=exc.raw_response)
                 else:
                     result["scores"] = json_value(grade.scores)
                     result["raw_judge_response"] = json_value(grade.raw_response)

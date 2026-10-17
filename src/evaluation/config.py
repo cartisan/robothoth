@@ -5,7 +5,7 @@ from typing import Any, Literal
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ModelConfig(BaseModel):
@@ -13,7 +13,7 @@ class ModelConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
     provider: Literal["openai", "anthropic"]
-    model: StrictStr
+    model: str
     settings: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("model")
@@ -41,11 +41,10 @@ class ModelConfig(BaseModel):
         Raises:
             Exception: If provider settings or credentials cannot configure the model.
         """
-        settings = self.settings.copy()
         if self.provider == "openai":
-            settings = {"use_responses_api": True, **settings}
+            settings = {"use_responses_api": True, **self.settings}
             return ChatOpenAI(model=self.model, **settings)
-        return ChatAnthropic(model_name=self.model, **settings)
+        return ChatAnthropic(model_name=self.model, **self.settings)
 
 
 class CandidateConfig(ModelConfig):

@@ -20,8 +20,7 @@ def get_backlinks(vault_path: str, notepath: str) -> list[str]:
     """
     relative_path = Path(notepath)
     if (
-        not notepath
-        or relative_path.is_absolute()
+        relative_path.is_absolute()
         or ".." in relative_path.parts
         or relative_path.suffix != ".md"
     ):
@@ -36,12 +35,12 @@ def get_backlinks(vault_path: str, notepath: str) -> list[str]:
 
     notes, by_stem = index_notes(vault)
 
-    backlinks: set[str] = set()
+    backlinks: list[str] = []
     for source_path, source in notes.items():
         content = source.read_text(encoding="utf-8")
         for destination in resolve_links(content, notes, by_stem):
             if notes[destination].resolve() == requested:
-                backlinks.add(source_path)
+                backlinks.append(source_path)
                 break
 
     return sorted(backlinks)

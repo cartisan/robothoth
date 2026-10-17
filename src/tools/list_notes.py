@@ -16,9 +16,6 @@ def list_notes(vault_path: str, path: str | None = None) -> list[str]:
             directory inside the vault.
     """
     vault = Path(vault_path).resolve()
-    if not vault.is_dir():
-        raise FileNotFoundError(vault_path)
-
     relative_dir = Path(path) if path is not None else Path(".")
     if relative_dir.is_absolute() or ".." in relative_dir.parts:
         raise ValueError(f"Directory must be within the vault: {path}")

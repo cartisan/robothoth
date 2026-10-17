@@ -218,16 +218,14 @@ class Registry:
             return self._error(
                 "invalid_arguments", "Tool arguments must be valid JSON."
             )
-        if not isinstance(arguments, dict) or not all(
-            isinstance(key, str) for key in arguments
-        ):
+        if not isinstance(arguments, dict):
             return self._error(
                 "invalid_arguments", "Tool arguments must be a JSON object."
             )
 
         try:
-            self._validate_arguments(spec, arguments)
-            result = spec.tool(vault_path, **arguments)
+            self._validate_arguments(spec=spec, arguments=arguments)
+            result = spec.tool(vault_path=vault_path, **arguments)
         except SearchTimeoutError:
             return self._error("search_timeout", "Search exceeded its time limit.")
         except FileNotFoundError:

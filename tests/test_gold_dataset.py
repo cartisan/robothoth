@@ -177,12 +177,11 @@ def test_loader_preserves_order_and_filters_cumulatively(tmp_path: Path) -> None
     assert load_dataset(path, version=0) == ()
 
 
-@pytest.mark.parametrize("version", [-1, True, 1.0, "1"])
-def test_loader_rejects_invalid_filter_values(tmp_path: Path, version: object) -> None:
+def test_loader_rejects_negative_filter_version(tmp_path: Path) -> None:
     path = tmp_path / "dataset.json"
-    write_dataset(path, [entry()])
-    with pytest.raises(ValueError, match="version"):
-        load_dataset(path, version)  # type: ignore[arg-type]
+    write_dataset(path=path, entries=[entry()])
+    with pytest.raises(expected_exception=ValueError, match="version"):
+        load_dataset(path=path, version=-1)
 
 
 def test_loader_validates_entire_file_before_filtering(tmp_path: Path) -> None:

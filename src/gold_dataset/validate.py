@@ -10,8 +10,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    StrictInt,
-    StrictStr,
     ValidationError,
     field_validator,
     model_validator,
@@ -38,8 +36,8 @@ class GroundTruth(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    ideal_answer: StrictStr | None = None
-    answer_criteria: list[StrictStr] | None = None
+    ideal_answer: str | None = None
+    answer_criteria: list[str] | None = None
 
     @field_validator("ideal_answer")
     @classmethod
@@ -66,10 +64,10 @@ class ToolChecks(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    required_tools: list[StrictStr] = Field(default_factory=list)
-    required_note_reads: list[StrictStr] = Field(default_factory=list)
-    forbidden_tools: list[StrictStr] = Field(default_factory=list)
-    allowed_tools: list[StrictStr] | None = None
+    required_tools: list[str] = Field(default_factory=list)
+    required_note_reads: list[str] = Field(default_factory=list)
+    forbidden_tools: list[str] = Field(default_factory=list)
+    allowed_tools: list[str] | None = None
 
     @field_validator("required_tools", "forbidden_tools", "allowed_tools")
     @classmethod
@@ -111,10 +109,10 @@ class GoldEntry(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    id: StrictStr
-    request: StrictStr
-    added_reason: StrictStr
-    dataset_version: StrictInt = Field(gt=0)
+    id: str
+    request: str
+    added_reason: str
+    dataset_version: int = Field(gt=0)
     ground_truth: GroundTruth
     tool_checks: ToolChecks
 
@@ -134,7 +132,7 @@ class GoldDataset(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    schema_version: StrictInt
+    schema_version: int
     entries: list[GoldEntry]
 
     @model_validator(mode="after")
@@ -183,7 +181,7 @@ def load_dataset_document(path: str | Path | None = None) -> GoldDataset:
         content = source.read_text(encoding="utf-8")
         raw = json.loads(content, object_pairs_hook=_unique_object)
         dataset = GoldDataset.model_validate(raw)
-    except (UnicodeError, json.JSONDecodeError, ValidationError, ValueError) as exc:
+    except ValueError as exc:
         detail = (
             _format_validation_error(exc)
             if isinstance(exc, ValidationError)
@@ -202,11 +200,11 @@ def load_dataset(
     later versions include all earlier cases, using their current expectations.
 
     Raises:
-        ValueError: If version is not a nonnegative integer.
+        ValueError: If version is negative.
         DatasetValidationError: If JSON content or the dataset schema is invalid.
         OSError: If the file cannot be read.
     """
-    if version is not None and (type(version) is not int or version < 0):
+    if version is not None and version < 0:
         raise ValueError("version must be a nonnegative integer")
     dataset = load_dataset_document(path)
     return tuple(

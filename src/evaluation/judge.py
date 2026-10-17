@@ -1,21 +1,13 @@
 """Grade answers independently of harness execution and tool evidence."""
 
 import json
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    StrictInt,
-    StrictStr,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.gold_dataset.validate import GroundTruth
 from src.utils import SystemPrompt
@@ -50,9 +42,9 @@ class ExpectationScore(BaseModel):
     """Retain a strict 1–5 integer score and short rationale for one expectation."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    expectation_id: StrictStr
-    score: StrictInt = Field(ge=1, le=5)
-    explanation: StrictStr
+    expectation_id: str
+    score: int = Field(ge=1, le=5)
+    explanation: str
 
     @field_validator("expectation_id", "explanation")
     @classmethod
@@ -93,26 +85,26 @@ def grading_input(
     """Return the semantic-only grading payload with stable expectation IDs.
 
     The ideal answer is one expectation, and criteria keep their original indexes.
+    Ground truth is already validated by its model.
     Tool evidence, candidate instructions, and model identity are never included.
 
     Raises:
-        ValueError: If request or answer is blank, or ground truth is invalid.
+        ValueError: If request or answer is blank.
     """
     for name, text in (("request", request), ("final_answer", final_answer)):
-        if not isinstance(text, str) or not text.strip():
+        if not text.strip():
             raise ValueError(f"{name} must be nonblank text")
-    truth = GroundTruth.model_validate(ground_truth.model_dump())
     expectations = []
-    if truth.ideal_answer is not None:
+    if ground_truth.ideal_answer is not None:
         expectations.append(
             {
                 "expectation_id": "ideal_answer",
-                "requirement": truth.ideal_answer,
+                "requirement": ground_truth.ideal_answer,
             }
         )
     expectations.extend(
         {"expectation_id": f"answer_criteria[{index}]", "requirement": criterion}
-        for index, criterion in enumerate(truth.answer_criteria or [])
+        for index, criterion in enumerate(ground_truth.answer_criteria or [])
     )
     return {
         "request": request,
@@ -145,14 +137,7 @@ class SemanticJudge:
             Exception: If default model configuration fails.
         """
         self.prompt = prompt
-        if structured_output_kwargs is not None and (
-            not isinstance(structured_output_kwargs, dict)
-            or not all(isinstance(key, str) for key in structured_output_kwargs)
-        ):
-            raise ValueError(
-                "structured_output_kwargs must be a string-keyed dictionary"
-            )
-        options = deepcopy(structured_output_kwargs or {})
+        options = dict(structured_output_kwargs or {})
         if options.get("include_raw", True) is not True:
             raise ValueError("judge requires include_raw=True")
         if "schema" in options or "tools" in options:
@@ -180,6 +165,8 @@ class SemanticJudge:
         The model receives only the versioned grading instructions and semantic
         payload. Missing, duplicate, unknown, or malformed scores invalidate the
         entire grade. Valid results are returned in original expectation order.
+        LangChain validates score fields against JudgeResponse; expectation
+        coverage is checked against this request's payload.
 
         Raises:
             ValueError: If grading inputs are invalid, before any model invocation.
@@ -187,57 +174,45 @@ class SemanticJudge:
                 expectation coverage fails. Raw responses are retained when available
                 and the original failure is chained.
         """
-        payload = grading_input(request, final_answer, ground_truth)
+        payload = grading_input(
+            request=request, final_answer=final_answer, ground_truth=ground_truth
+        )
         raw: Any = None
         try:
             bound = self.model.with_structured_output(
-                JudgeResponse,
+                schema=JudgeResponse,
                 **self.structured_output_kwargs,
             )
-            response = bound.invoke(
-                [
+            response: Any = bound.invoke(
+                input=[
                     SystemMessage(content=self.prompt.text),
-                    HumanMessage(content=json.dumps(payload, ensure_ascii=False)),
+                    HumanMessage(content=json.dumps(obj=payload, ensure_ascii=False)),
                 ]
             )
-            raw = (
-                response.get("raw", response)
-                if isinstance(response, dict)
-                else response
-            )
-            if not isinstance(response, dict) or not {"raw", "parsed"}.issubset(
-                response
-            ):
-                raise ValueError(
-                    "structured output must include raw and parsed response"
-                )
-            if response.get("parsing_error") is not None:
+            raw = response["raw"]
+            if response["parsing_error"] is not None:
                 raise ValueError(str(response["parsing_error"]))
-            if isinstance(raw, AIMessage):
-                metadata = raw.response_metadata
-                status = metadata.get("status")
-                finish = metadata.get("finish_reason", metadata.get("stop_reason"))
-                if (
-                    raw.additional_kwargs.get("refusal")
-                    or (status is not None and status not in {"complete", "completed"})
-                    or (
-                        finish is not None
-                        and finish
-                        not in {
-                            "stop",
-                            "end_turn",
-                            "tool_calls",
-                            "tool_use",
-                            "function_call",
-                            "stop_sequence",
-                        }
-                    )
-                ):
-                    raise ValueError("judge response was refused or incomplete")
-            parsed = response["parsed"]
-            if isinstance(parsed, BaseModel):
-                parsed = parsed.model_dump()
-            validated = JudgeResponse.model_validate(parsed)
+            metadata = raw.response_metadata
+            status = metadata.get("status")
+            finish = metadata.get("finish_reason", metadata.get("stop_reason"))
+            if (
+                raw.additional_kwargs.get("refusal")
+                or (status is not None and status not in {"complete", "completed"})
+                or (
+                    finish is not None
+                    and finish
+                    not in {
+                        "stop",
+                        "end_turn",
+                        "tool_calls",
+                        "tool_use",
+                        "function_call",
+                        "stop_sequence",
+                    }
+                )
+            ):
+                raise ValueError("judge response was refused or incomplete")
+            validated: JudgeResponse = response["parsed"]
             expected = [item["expectation_id"] for item in payload["expectations"]]
             actual = [item.expectation_id for item in validated.scores]
             if len(actual) != len(set(actual)) or set(actual) != set(expected):
@@ -245,6 +220,8 @@ class SemanticJudge:
                     "judge expectation IDs are missing, duplicate, or unknown"
                 )
             by_id = {item.expectation_id: item for item in validated.scores}
-            return SemanticGrade(tuple(by_id[key] for key in expected), raw)
+            return SemanticGrade(
+                scores=tuple(by_id[key] for key in expected), raw_response=raw
+            )
         except Exception as exc:
             raise JudgeError(str(exc), raw) from exc
