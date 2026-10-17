@@ -255,7 +255,7 @@ def test_cli_success_and_failure(tmp_path: Path) -> None:
     path = tmp_path / "dataset.json"
     write_dataset(path, [entry()])
     ok = subprocess.run(
-        [sys.executable, "-m", "src.golden_dataset.validate", str(path)],
+        [sys.executable, "-m", "src.gold_dataset.validate", str(path)],
         capture_output=True,
         text=True,
         check=False,
@@ -264,7 +264,7 @@ def test_cli_success_and_failure(tmp_path: Path) -> None:
     assert "1" in ok.stdout
     path.write_text("{", encoding="utf-8")
     bad = subprocess.run(
-        [sys.executable, "-m", "src.golden_dataset.validate", str(path)],
+        [sys.executable, "-m", "src.gold_dataset.validate", str(path)],
         capture_output=True,
         text=True,
         check=False,
@@ -275,7 +275,7 @@ def test_cli_success_and_failure(tmp_path: Path) -> None:
 
 def test_cli_default_dataset() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "src.golden_dataset.validate"],
+        [sys.executable, "-m", "src.gold_dataset.validate"],
         capture_output=True,
         text=True,
         check=False,
