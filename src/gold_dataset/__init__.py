@@ -15,6 +15,10 @@ from pydantic import (
     model_validator,
 )
 
+from src.utils import normalize_note_path
+
+DEFAULT_DATASET_PATH = Path(__file__).with_name("dataset.json")
+
 
 class DatasetValidationError(ValueError):
     """Report invalid dataset content with its source path and field locations."""
@@ -55,6 +59,51 @@ class GroundTruth(BaseModel):
         return self
 
 
+class ToolChecks(BaseModel):
+    """Require successful calls or prohibit attempted tools, regardless of order."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    required_tools: list[StrictStr] = Field(default_factory=list)
+    required_note_reads: list[StrictStr] = Field(default_factory=list)
+    forbidden_tools: list[StrictStr] = Field(default_factory=list)
+    allowed_tools: list[StrictStr] | None = None
+
+    @field_validator("required_tools", "forbidden_tools", "allowed_tools")
+    @classmethod
+    def validate_tools(cls, value: list[str] | None) -> list[str] | None:
+        """Accept absent allowlists or unique nonblank tool names."""
+        if value is not None:
+            for item in value:
+                _nonblank(item)
+            if len(set(value)) != len(value):
+                raise ValueError("tool names must be unique")
+        return value
+
+    @field_validator("required_note_reads")
+    @classmethod
+    def validate_paths(cls, value: list[str]) -> list[str]:
+        """Accept unique full relative Markdown paths after lexical normalization."""
+        normalized = [normalize_note_path(item) for item in value]
+        if any(not item.endswith(".md") for item in normalized):
+            raise ValueError("required note reads must be Markdown file paths")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("required note paths must be unique")
+        return normalized
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> "ToolChecks":
+        """Require demanded tools, including note reads, to be permitted."""
+        required = set(self.required_tools)
+        if self.required_note_reads:
+            required.add("read_note")
+        if required.intersection(self.forbidden_tools):
+            raise ValueError("required tools must not be forbidden")
+        if self.allowed_tools is not None and not required.issubset(self.allowed_tools):
+            raise ValueError("required tools must be in allowed_tools")
+        return self
+
+
 class GoldEntry(BaseModel):
     """One versioned evaluation request with its reason and ground truth."""
 
@@ -65,6 +114,7 @@ class GoldEntry(BaseModel):
     added_reason: StrictStr
     dataset_version: StrictInt = Field(gt=0)
     ground_truth: GroundTruth
+    tool_checks: ToolChecks
 
     @field_validator("id", "request", "added_reason")
     @classmethod
@@ -74,7 +124,11 @@ class GoldEntry(BaseModel):
 
 
 class GoldDataset(BaseModel):
-    """Schema-versioned collection whose entries have unique IDs."""
+    """Collection with unique entry IDs and an unrestricted integer schema version.
+
+    Every version uses the same entry validation rules. The supplied version is
+    retained as metadata without selecting or filtering entries.
+    """
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -111,26 +165,18 @@ def _format_validation_error(error: ValidationError) -> str:
     return "; ".join(lines)
 
 
-def load_dataset(
-    path: str | Path | None = None, version: int | None = None
-) -> tuple[GoldEntry, ...]:
-    """Return validated entries in file order, optionally through a version.
+def load_dataset_document(path: str | Path | None = None) -> GoldDataset:
+    """Return the entire validated dataset with its schema metadata.
 
-    The default JSON file is resolved beside this package, independent of the
-    current directory. The entire file is validated before version filtering;
-    version 0 selects no entries and later versions include all earlier ones.
+    The bundled path is independent of the current directory. Duplicate JSON
+    keys, unknown fields, and coercion are rejected. Any integer schema version
+    is accepted and preserved; entries use the current model's validation rules.
 
     Raises:
-        ValueError: If version is not a nonnegative integer.
         DatasetValidationError: If JSON content or the dataset schema is invalid.
         OSError: If the file cannot be read.
     """
-    if version is not None and (type(version) is not int or version < 0):
-        raise ValueError("version must be a nonnegative integer")
-
-    source = (
-        Path(path) if path is not None else Path(__file__).with_name("dataset.json")
-    )
+    source = Path(path) if path is not None else DEFAULT_DATASET_PATH
     try:
         content = source.read_text(encoding="utf-8")
         raw = json.loads(content, object_pairs_hook=_unique_object)
@@ -142,6 +188,25 @@ def load_dataset(
             else str(exc)
         )
         raise DatasetValidationError(f"{source}: {detail}") from exc
+    return dataset
+
+
+def load_dataset(
+    path: str | Path | None = None, version: int | None = None
+) -> tuple[GoldEntry, ...]:
+    """Return validated entries in file order, optionally through a version.
+
+    The entire file is validated before filtering. Version 0 selects no entries;
+    later versions include all earlier cases, using their current expectations.
+
+    Raises:
+        ValueError: If version is not a nonnegative integer.
+        DatasetValidationError: If JSON content or the dataset schema is invalid.
+        OSError: If the file cannot be read.
+    """
+    if version is not None and (type(version) is not int or version < 0):
+        raise ValueError("version must be a nonnegative integer")
+    dataset = load_dataset_document(path)
     return tuple(
         item
         for item in dataset.entries

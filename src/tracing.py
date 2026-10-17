@@ -259,7 +259,8 @@ class Trace:
     Each instance owns its call list. Costs represent tokens rather than money,
     and latency represents API invocation time rather than whole-run time.
     The initial request snapshot is separate from API response metrics and is
-    absent until a valid run attempts its first API invocation.
+    absent until a run prepares its initial request, including runs whose tool
+    binding fails before the first API invocation.
     """
 
     calls: list[CallTrace] = field(default_factory=list)

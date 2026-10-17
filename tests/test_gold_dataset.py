@@ -14,6 +14,7 @@ from src.gold_dataset import (
     GoldEntry,
     GroundTruth,
     load_dataset,
+    load_dataset_document,
 )
 
 
@@ -24,14 +25,20 @@ def entry(**changes: object) -> dict[str, object]:
         "added_reason": "Check note discovery",
         "dataset_version": 1,
         "ground_truth": {"ideal_answer": "The note is in evaluation."},
+        "tool_checks": {},
     }
     result.update(changes)
     return result
 
 
-def write_dataset(path: Path, entries: list[dict[str, object]]) -> None:
+def write_dataset(
+    path: Path,
+    entries: list[dict[str, object]],
+    schema_version: int = 1,
+) -> None:
     path.write_text(
-        json.dumps({"schema_version": 1, "entries": entries}), encoding="utf-8"
+        data=json.dumps(obj={"schema_version": schema_version, "entries": entries}),
+        encoding="utf-8",
     )
 
 
@@ -111,7 +118,8 @@ def test_entry_rejects_blank_wrong_type_and_extra_fields(
 
 
 @pytest.mark.parametrize(
-    "missing", ["id", "request", "added_reason", "dataset_version", "ground_truth"]
+    "missing",
+    ["id", "request", "added_reason", "dataset_version", "ground_truth", "tool_checks"],
 )
 def test_entry_requires_all_fields(missing: str) -> None:
     value = entry()
@@ -125,6 +133,32 @@ def test_dataset_rejects_duplicate_ids_and_extra_fields() -> None:
         GoldDataset.model_validate({"schema_version": 1, "entries": [entry(), entry()]})
     with pytest.raises(ValidationError):
         GoldDataset.model_validate({"schema_version": 1, "entries": [], "extra": 1})
+
+
+@pytest.mark.parametrize(argnames="version", argvalues=[-1, 0, 1, 2, 99])
+def test_dataset_accepts_and_preserves_any_integer_schema_version(
+    version: int,
+    tmp_path: Path,
+) -> None:
+    entries = [entry(id="first"), entry(id="later", dataset_version=3)]
+    dataset = GoldDataset.model_validate(
+        obj={"schema_version": version, "entries": entries}
+    )
+    assert dataset.schema_version == version
+    path = tmp_path / "dataset.json"
+    write_dataset(path=path, entries=entries, schema_version=version)
+    loaded = load_dataset_document(path=path)
+    assert loaded.schema_version == version
+    assert [item.id for item in loaded.entries] == ["first", "later"]
+    assert [item.id for item in load_dataset(path=path)] == ["first", "later"]
+
+
+@pytest.mark.parametrize(argnames="version", argvalues=[True, "1", 1.0])
+def test_dataset_rejects_noninteger_schema_versions(version: object) -> None:
+    with pytest.raises(expected_exception=ValidationError):
+        GoldDataset.model_validate(
+            obj={"schema_version": version, "entries": [entry()]}
+        )
 
 
 def test_loader_preserves_order_and_filters_cumulatively(tmp_path: Path) -> None:
