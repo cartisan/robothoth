@@ -3,7 +3,7 @@
 `dataset.json` is the single manually maintained source of evaluation cases.
 The bundled file's `schema_version` is `1`. `GoldDataset` accepts any integer
 schema version and preserves it as metadata. Every version uses the same entry
-validation rules defined by the Pydantic models in `__init__.py`; the version
+validation rules defined by the Pydantic models in `validate.py`; the version
 does not select or filter cases. Noninteger values and type coercion are rejected.
 
 Each entry has a unique, nonblank `id`, a `request`, an `added_reason`, a
@@ -37,11 +37,12 @@ was added in `added_reason`, and supply its expectations. Multiple cases may
 share a version. Run validation before committing:
 
 ```sh
-uv run --locked python -m src.gold_dataset
-uv run --locked python -m src.gold_dataset path/to/dataset.json
+uv run --locked python -m src.golden_dataset.validate
+uv run --locked python -m src.golden_dataset.validate path/to/dataset.json
 ```
 
-In Python, `load_dataset(path=None, version=None)` returns all validated entries
+In Python, import dataset models and loading functions directly from
+`src.golden_dataset.validate`. `load_dataset(path=None, version=None)` returns all validated entries
 in file order. Passing version `N` selects entries introduced at or before `N`;
 version `0` selects none. The entire file is checked before filtering. 
 Git preserves historical edits to cases; filtering does not restore earlier expectations.

@@ -10,18 +10,19 @@ from langchain_core.messages import AIMessage
 from test_gold_dataset import entry, write_dataset
 from test_harness import ScriptedChatModel
 
-import src.evaluation.__main__ as cli
+import src.evaluation.run as cli
 import src.evaluation.runner as runner
-from src.evaluation import (
-    DEFAULT_JUDGE_PROMPT,
-    SemanticJudge,
-    SystemPrompt,
-    run_evaluation,
-)
 from src.evaluation.config import ModelConfig
-from src.evaluation.judge import ExpectationScore, SemanticGrade
+from src.evaluation.judge import (
+    DEFAULT_JUDGE_PROMPT,
+    ExpectationScore,
+    SemanticGrade,
+    SemanticJudge,
+)
 from src.evaluation.reporting import without_credentials
+from src.evaluation.runner import run_evaluation
 from src.harness import SYSTEM_PROMPT
+from src.utils import SystemPrompt
 
 
 def judge_with(*responses: Any) -> SemanticJudge:

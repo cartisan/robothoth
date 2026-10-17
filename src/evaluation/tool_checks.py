@@ -3,7 +3,7 @@
 import json
 from dataclasses import dataclass
 
-from src.gold_dataset import ToolChecks, _unique_object
+from src.gold_dataset.validate import ToolChecks, _unique_object
 from src.tracing import ToolCallTrace, Trace
 from src.utils import normalize_note_path
 

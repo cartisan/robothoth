@@ -17,7 +17,7 @@ from pydantic import (
     field_validator,
 )
 
-from src.gold_dataset import GroundTruth
+from src.gold_dataset.validate import GroundTruth
 from src.utils import SystemPrompt
 
 DEFAULT_JUDGE_PROMPT = SystemPrompt(

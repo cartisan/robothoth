@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.evaluation import DEFAULT_JUDGE_PROMPT
+from src.evaluation.judge import DEFAULT_JUDGE_PROMPT
 from src.harness import SYSTEM_PROMPT
 from src.utils import SystemPrompt
 

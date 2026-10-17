@@ -8,17 +8,17 @@ import pytest
 from langchain_core.messages import AIMessage
 from pydantic import SecretStr
 
-from src.evaluation import (
+from src.evaluation.config import EvaluationConfig
+from src.evaluation.judge import (
     DEFAULT_JUDGE_PROMPT,
     JudgeError,
+    JudgeResponse,
     SemanticJudge,
-    SystemPrompt,
     grading_input,
 )
-from src.evaluation.config import EvaluationConfig
-from src.evaluation.judge import JudgeResponse
 from src.evaluation.reporting import model_configuration
-from src.gold_dataset import GroundTruth
+from src.gold_dataset.validate import GroundTruth
+from src.utils import SystemPrompt
 
 TRUTH = GroundTruth(ideal_answer="Essential meaning", answer_criteria=["Concise"])
 

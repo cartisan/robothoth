@@ -21,7 +21,7 @@ available as `execute_openai()`, `execute_claude()`, and `execute_kimi()` in
 `src.main`.
 
 The manually maintained [gold dataset](src/gold_dataset/README.md) contains
-validated evaluation cases. Run `uv run --locked python -m src.gold_dataset` to
+validated evaluation cases. Run `uv run --locked python -m src.golden_dataset.validate` to
 validate the bundled file and print its case count.
 
 Pass a configured, tool-capable LangChain `BaseChatModel` directly:
@@ -55,9 +55,9 @@ otherwise the chat model's class name is used.
 Evaluate all gold cases with an independently configured judge:
 
 ```sh
-uv run --locked python -m src.evaluation --output-directory evaluation_runs
-uv run --locked python -m src.evaluation --config evaluation.json \
-  --dataset-path src/gold_dataset/dataset.json --vault-path tests/test_vault \
+uv run --locked python -m src.evaluation.run --output-directory evaluation_runs
+uv run --locked python -m src.evaluation.run --config evaluation.json \
+  --dataset-path src/golden_dataset/dataset.json --vault-path tests/test_vault \
   --repeats 3 --max-api-calls 20 \
   --output-directory evaluation_runs
 ```

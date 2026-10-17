@@ -6,8 +6,8 @@ from itertools import permutations
 import pytest
 from pydantic import ValidationError
 
-from src.evaluation import evaluate_tool_checks
-from src.gold_dataset import ToolChecks, load_dataset
+from src.evaluation.tool_checks import evaluate_tool_checks
+from src.gold_dataset.validate import ToolChecks, load_dataset
 from src.tracing import CallTrace, ToolCallTrace, Trace
 
 

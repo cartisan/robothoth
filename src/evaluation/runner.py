@@ -18,7 +18,11 @@ from src.evaluation.reporting import (
     without_credentials,
 )
 from src.evaluation.tool_checks import evaluate_tool_checks
-from src.gold_dataset import DEFAULT_DATASET_PATH, GoldDataset, load_dataset_document
+from src.gold_dataset.validate import (
+    DEFAULT_DATASET_PATH,
+    GoldDataset,
+    load_dataset_document,
+)
 from src.harness import (
     SYSTEM_PROMPT,
     HarnessError,

@@ -14,7 +14,7 @@ from src.evaluation.runner import (
     run_evaluation,
     validate_evaluation_inputs,
 )
-from src.gold_dataset import _unique_object
+from src.gold_dataset.validate import _unique_object
 from src.harness import SYSTEM_PROMPT
 
 

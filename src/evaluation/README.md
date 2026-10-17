@@ -10,7 +10,8 @@ In Python:
 
 ```python
 from langchain_openai import ChatOpenAI
-from src.evaluation import SemanticJudge, run_evaluation
+from src.evaluation.judge import SemanticJudge
+from src.evaluation.runner import run_evaluation
 from src.harness import SYSTEM_PROMPT
 
 run = run_evaluation(
@@ -30,7 +31,7 @@ print(run.report["summary"])
 
 `SemanticJudge(model, prompt, structured_output_kwargs)` can also grade saved
 answers independently via `grade(request, final_answer, ground_truth)`, with
-`GroundTruth` from `src.gold_dataset`. Both the harness and judge accept the shared
+`GroundTruth` from `src.golden_dataset.validate`. Both the harness and judge accept the shared
 immutable `SystemPrompt` model from `src.utils`, for example
 `SystemPrompt(version=2, text="Custom system instructions")`. It requires a
 strict positive integer version and nonblank text, rejects extra fields, and
@@ -95,8 +96,8 @@ Custom Python judge prompts should preserve the scoring anchors and semantic
 input boundary; their full text and integer version are recorded for later review.
 
 ```sh
-uv run --locked python -m src.evaluation --config evaluation.json \
-  --dataset-path src/gold_dataset/dataset.json --vault-path tests/test_vault \
+uv run --locked python -m src.evaluation.run --config evaluation.json \
+  --dataset-path src/golden_dataset/dataset.json --vault-path tests/test_vault \
   --repeats 3 --max-api-calls 20 \
   --output-directory evaluation_runs
 ```
