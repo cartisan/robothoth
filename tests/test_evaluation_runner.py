@@ -15,8 +15,11 @@ import src.evaluation.run as cli
 import src.evaluation.runner as runner
 from src.evaluation.config import ModelConfig
 from src.evaluation.judge import (
-    DEFAULT_JUDGE_PROMPT,
+    CONCISION_PROMPT,
+    CONTENT_PROMPT,
+    TASK_USEFULNESS_PROMPT,
     ExpectationScore,
+    JudgeCall,
     SemanticGrade,
     SemanticJudge,
 )
@@ -30,21 +33,28 @@ def judge_with(*responses: Any) -> SemanticJudge:
     model = MagicMock()
     model.model_dump.return_value = {"model": "judge"}
     raw = AIMessage(content="raw judge output")
-    model.with_structured_output.return_value.invoke.side_effect = [
-        response
-        if isinstance(response, Exception)
-        else structured_response(
-            raw=raw,
-            scores=[
-                {
-                    "expectation_id": "ideal_answer",
-                    "score": response,
-                    "explanation": "Meaning checked",
-                }
-            ],
-        )
-        for response in responses
-    ]
+    scripted: list[Any] = []
+    for response in responses:
+        if isinstance(response, Exception):
+            scripted.append(response)
+            continue
+        for key in ("ideal_answer", "quality.concision", "quality.task_usefulness"):
+            scripted.append(
+                structured_response(
+                    raw=raw,
+                    scores=[
+                        {
+                            "expectation_id": key,
+                            "score": response if key == "ideal_answer" else 5,
+                            "explanation": "Meaning checked"
+                            if key == "ideal_answer"
+                            else "Useful and concise",
+                        }
+                    ],
+                )
+            )
+    model.with_structured_output.return_value.invoke.side_effect = scripted
+
     return SemanticJudge(model)
 
 
@@ -62,10 +72,7 @@ def test_all_cases_repeats_thresholds_and_version_metadata(
     candidate = ScriptedChatModel(
         responses=[AIMessage(content=str(i)) for i in range(4)]
     )
-    judge = SemanticJudge(
-        model=judge_with(4, 3, 5, 4).model,
-        prompt=SystemPrompt(version=3, text="Judge instructions"),
-    )
+    judge = judge_with(4, 3, 5, 4)
     run = run_evaluation(
         candidate_model=candidate,
         system_prompt=SystemPrompt(version=2, text="Candidate prompt"),
@@ -99,13 +106,21 @@ def test_all_cases_repeats_thresholds_and_version_metadata(
         "status" not in case and "verdict" not in case
         for case in report["case_summaries"]
     )
-    assert report["report_version"] == 2
+    assert report["report_version"] == 3
     assert report["candidate_system_prompt"] == {
         "version": 2,
         "text": "Candidate prompt",
     }
-    assert report["judge_prompt"] == judge.prompt.model_dump()
-    assert report["judge_prompt"]["version"] == 3
+    assert report["judge_prompt"] == CONTENT_PROMPT.model_dump()
+    assert report["quality_judge_prompts"] == {
+        "concision": CONCISION_PROMPT.model_dump(),
+        "task_usefulness": TASK_USEFULNESS_PROMPT.model_dump(),
+    }
+    assert [call["stage"] for call in report["results"][0]["judge_calls"]] == [
+        "content",
+        "concision",
+        "task_usefulness",
+    ]
     assert report["dataset_path"] == str(path.resolve())
     assert "entries" not in report and "dataset_hash" not in report
     assert report["finished_at"] and report["run_id"]
@@ -154,7 +169,9 @@ def test_errors_continue_and_exclude_error_denominators(tmp_path: Path) -> None:
     assert harness_failure["trace"]["calls"][0]["output"] is None
     assert harness_failure["error"]["cause"]["type"] == "ConnectionError"
     assert judge_failure["final_answer"] == "Last"
-    assert judge_failure["raw_judge_response"]["content"] == "raw judge output"
+    assert (
+        judge_failure["judge_calls"][0]["raw_response"]["content"] == "raw judge output"
+    )
     assert judge_failure["scores"] == []
     assert report["case_summaries"][1]["pass_rate"] is None
     assert report["summary"]["total_tokens"] is None
@@ -443,13 +460,16 @@ def test_cli_independent_provider_settings_and_bundled_prompts(
     assert models[1].settings == {"reasoning_effort": "medium"}
     assert candidate.requests[0][0].content == SYSTEM_PROMPT.text
     invocation = judge.model.with_structured_output.return_value.invoke  # type: ignore[attr-defined]
-    messages = invocation.call_args.kwargs["input"]
-    assert messages[0].content == DEFAULT_JUDGE_PROMPT.text
+    assert [call.kwargs["input"][0].content for call in invocation.call_args_list] == [
+        CONTENT_PROMPT.text,
+        CONCISION_PROMPT.text,
+        TASK_USEFULNESS_PROMPT.text,
+    ]
     assert candidate.binding_kwargs == {"tool_choice": "auto"}
     report_path = next((tmp_path / "reports").glob("*/report.json"))
     report = json.loads(report_path.read_text())
     assert report["candidate_system_prompt"] == SYSTEM_PROMPT.model_dump()
-    assert report["judge_prompt"] == DEFAULT_JUDGE_PROMPT.model_dump()
+    assert report["judge_prompt"] == CONTENT_PROMPT.model_dump()
     assert report["harness_settings"]["max_api_calls"] == 7
 
 
@@ -513,7 +533,7 @@ def test_every_semantic_score_and_tool_requirement_must_pass(tmp_path: Path) -> 
                 expectation_id="answer_criteria[0]", score=3, explanation="Long"
             ),
         ),
-        AIMessage(content="raw"),
+        (JudgeCall(stage="content", raw_response=AIMessage(content="raw")),),
     )
     judge.grade = MagicMock(return_value=grade)  # type: ignore[method-assign]
     run = run_evaluation(
@@ -650,13 +670,19 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
             ),
             scores=[
                 {
-                    "expectation_id": "ideal_answer",
+                    "expectation_id": key,
                     "score": score,
                     "explanation": "Meaning checked",
                 }
             ],
         )
-        for tokens, score in [(25, 5), (35, "invalid")]
+        for key, tokens, score in [
+            ("ideal_answer", 10, 5),
+            ("quality.concision", 5, 5),
+            ("quality.task_usefulness", 10, 5),
+            ("ideal_answer", 15, 5),
+            ("quality.concision", 20, "invalid"),
+        ]
     ]
     monkeypatch.setattr(
         target=runner,
@@ -676,6 +702,8 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
     report = run.report
     assert [item["status"] for item in report["results"]] == ["passed", "judge_error"]
     assert [item["elapsed_seconds"] for item in report["results"]] == [4.0, 7.0]
+    assert [len(item["judge_calls"]) for item in report["results"]] == [3, 2]
+    assert "concision:" in report["results"][1]["error"]["message"]
     assert [item["total_tokens"] for item in report["results"]] == [125, 235]
     assert report["summary"]["candidate_tokens"] == 300
     assert report["summary"]["judge_tokens"] == 60
@@ -692,3 +720,42 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
     )
     assert stored["summary"]["total_tokens"] == 360
     assert stored["elapsed_seconds"] == 15.0
+
+
+@pytest.mark.parametrize(
+    argnames="quality_id", argvalues=["quality.concision", "quality.task_usefulness"]
+)
+@pytest.mark.parametrize(argnames="value", argvalues=[3, 4])
+def test_quality_threshold_controls_repeat_status_and_exit_code(
+    tmp_path: Path,
+    quality_id: str,
+    value: int,
+) -> None:
+    """Require both isolated quality grades independently of passing content."""
+    path = tmp_path / "dataset.json"
+    write_dataset(path=path, entries=[entry()])
+    judge = judge_with(5)
+    model: Any = judge.model
+    model.with_structured_output.return_value.invoke.side_effect = [
+        structured_response(
+            raw=AIMessage(content=key),
+            scores=[
+                {
+                    "expectation_id": key,
+                    "score": value if key == quality_id else 5,
+                    "explanation": "Independently assessed",
+                }
+            ],
+        )
+        for key in ("ideal_answer", "quality.concision", "quality.task_usefulness")
+    ]
+    run = run_evaluation(
+        candidate_model=ScriptedChatModel(responses=[AIMessage(content="Answer")]),
+        vault_path=tmp_path,
+        judge=judge,
+        dataset_path=path,
+        report_destination=tmp_path / "reports",
+    )
+    assert run.report["results"][0]["status"] == ("failed" if value == 3 else "passed")
+    assert run.exit_code == (1 if value == 3 else 0)
+    assert len(run.report["results"][0]["judge_calls"]) == 3

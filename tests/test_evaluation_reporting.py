@@ -78,9 +78,14 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
                     "explanation": explanation,
                 },
                 {
-                    "expectation_id": "answer_criteria[0]",
+                    "expectation_id": "quality.concision",
                     "score": 4,
                     "explanation": "The answer is concise.",
+                },
+                {
+                    "expectation_id": "quality.task_usefulness",
+                    "score": 5,
+                    "explanation": "Directly usable.",
                 },
             ],
             "error": None,
@@ -99,7 +104,8 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
         "Missing successful read of area/Note.md. | None |"
     ) in summary
     assert "| ideal_answer | 3 / 5 | failed |" in summary
-    assert "| answer_criteria[0] | 4 / 5 | passed | The answer is concise. |" in summary
+    assert "| quality.concision | 4 / 5 | passed | The answer is concise. |" in summary
+    assert "| quality.task_usefulness | 5 / 5 | passed | Directly usable. |" in summary
     assert (
         "The answer covers the main idea \\| but omits escalation.<br>"
         "A different phrasing would be fine. &lt;Missing essential content&gt;"
@@ -176,11 +182,46 @@ def test_repeat_cost_counts_both_models_and_preserves_unknown_usage(
         result={
             "status": status,
             "trace": {"calls": [{"total_tokens": value} for value in candidate_usage]},
-            "raw_judge_response": raw_judge,
+            "judge_calls": []
+            if status == "harness_error"
+            else [{"stage": "content", "raw_response": raw_judge}],
         }
     )
     assert usage == {
         "candidate_tokens": candidate_tokens,
         "judge_tokens": judge_tokens,
         "total_tokens": total_tokens,
+    }
+
+
+@pytest.mark.parametrize(
+    argnames="tokens,expected",
+    argvalues=[([10, 20, 30], 60), ([10, 20], 30), ([10, None], None), ([], 0)],
+)
+def test_cost_sums_all_attempted_calls_and_preserves_unknown_usage(
+    tokens: list[int | None],
+    expected: int | None,
+) -> None:
+    """Include earlier responses on failed grades and unknown failed-call costs."""
+    stages = ["content", "concision", "task_usefulness"]
+    result = repeat_token_usage(
+        result={
+            "trace": {"calls": []},
+            "judge_calls": [
+                {
+                    "stage": stages[index],
+                    "raw_response": (
+                        {"usage_metadata": {"total_tokens": value}}
+                        if value is not None
+                        else None
+                    ),
+                }
+                for index, value in enumerate(tokens)
+            ],
+        }
+    )
+    assert result == {
+        "candidate_tokens": 0,
+        "judge_tokens": expected,
+        "total_tokens": expected,
     }

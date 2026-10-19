@@ -1,21 +1,23 @@
 # Gold dataset
 
-`dataset.json` is the single manually maintained source of evaluation cases.
-The bundled file's `schema_version` is `1`. `GoldDataset` accepts any integer
-schema version and preserves it as metadata. Every version uses the same entry
-validation rules defined by the Pydantic models in `validate.py`; the version
-does not select or filter cases. Noninteger values and type coercion are rejected.
+`dataset.json` is the manually maintained source of evaluation cases. Its
+`schema_version` is `1`; this is metadata and does not select validation rules.
+Unknown fields and type coercion are rejected.
 
-Each entry has a unique, nonblank `id`, a `request`, an `added_reason`, a
-positive integer `dataset_version`, `ground_truth`, and required `tool_checks`
-object. Ground truth may contain
-an `ideal_answer`, an `answer_criteria` array, or both. A supplied answer and
-every supplied criterion must be nonblank; at least one usable expectation is
-required. When both are present, the ideal answer is a reference and **all**
-criteria apply. Unknown fields and type coercion are rejected.
+Each entry requires a unique nonblank `id`, `request`, `added_reason`, positive
+integer `dataset_version`, `ground_truth`, and `tool_checks`. Ground truth needs
+an `ideal_answer`, nonempty `answer_criteria`, or both. Supplied answers and
+criteria must be nonblank; when both are present, all expectations apply.
 
-Tool requirements are deterministic and belong in `tool_checks`, rather than
-semantic criteria:
+Use ideal answers for correctness and essential coverage. Keep case-specific
+criteria focused on critical exclusions and source caveats. Shared concision and
+task-usefulness rubrics belong in the [judge](../evaluation/README.md#scoring).
+Base expectations on the vault snapshot and its caveats, independently of candidate
+performance.
+
+## Tool checks
+
+Deterministic tool requirements belong in `tool_checks`:
 
 | Field | Default | Requirement |
 | --- | --- | --- |
@@ -24,46 +26,40 @@ semantic criteria:
 | `forbidden_tools` | `[]` | No attempted call to these names |
 | `allowed_tools` | `null` | If supplied, every attempted tool must be in this list |
 
-The object may be empty. Lists require unique nonblank strings. Required tools
-must be allowed and cannot be forbidden; required note reads implicitly require
-`read_note`. Paths reject absolute forms and parent traversal, normalize slash
-styles and `.` components lexically, and remain case-sensitive. Checks ignore
-call order and frequency. Unexecuted or failed calls do not satisfy requirements,
-but still count for prohibitions and allowlists.
+The object may be empty. Lists require unique nonblank values; required tools
+must be allowed and cannot be forbidden. Required note reads imply `read_note`.
+Paths are case-sensitive and vault-relative, with separators and `.` normalized;
+absolute paths and parent traversal are rejected.
 
-To add cases, append objects to the existing `entries` array in `dataset.json`.
-Give each a new ID, set its introduction `dataset_version`, explain why the case
-was added in `added_reason`, and supply its expectations. Name the ID after the
-evaluation purpose or assistant behavior rather than the retrieved notes' subject
-matter; prefer three lowercase hyphen-delimited parts, such as
-`multi-source-integration`. Multiple cases may
-share a version. The reason should identify the evaluation coverage and the
-assistant capability, behavior, or failure mode being tested; it should not
-summarize the source notes or repeat the expected answer. Run validation before
-committing:
+Checks ignore call order and frequency. Failed or unexecuted calls do not satisfy
+requirements, but count toward prohibitions and allowlists.
+
+## Adding and loading cases
+
+Append entries to `dataset.json` and set their introduction `dataset_version`.
+Name IDs after the tested behavior, preferably three lowercase hyphen-delimited
+parts such as `multi-source-integration`. Use `added_reason` to explain evaluation
+coverage or failure modes, keeping answer expectations in `ground_truth`.
 
 ```sh
 uv run --locked python -m src.gold_dataset.validate
 uv run --locked python -m src.gold_dataset.validate path/to/dataset.json
 ```
 
-In Python, import dataset models and loading functions directly from
-`src.gold_dataset.validate`. `load_dataset(path=None, version=None)` returns all validated entries
-in file order. Passing version `N` selects entries introduced at or before `N`;
-version `0` selects none. The entire file is checked before filtering. 
-Git preserves historical edits to cases; filtering does not restore earlier expectations.
-The evaluation runner always uses every validated entry and offers no version
-filter or individual case selection. Its gold dataset version is the highest
-entry `dataset_version`.
+Import models and loaders from `src.gold_dataset.validate`.
+`load_dataset(path=None, version=None)` validates the entire file, then returns
+entries in file order. Version `N` includes entries introduced at or before `N`;
+`None` includes all and `0` includes none. Git retains historical edits to
+expectations. The runner always evaluates all cases and reports the highest
+entry version as `gold_dataset_version`.
 
 ## Bundled coverage
 
-The bundled dataset has 14 entries: three introduced in version 1
-and eleven introduced in version 2. The schema version remains 1. Every version 2
-entry supplies both an ideal answer and semantic criteria. The five hard cases
-require three or more specific note reads plus multiple tools. Tool checks do
-not constrain call order; the two graph-only cases explicitly request their
-single tool and use an allowlist.
+The 14 cases include three introduced in version 1 and eleven in version 2.
+Five hard cases require at least three specific note reads and multiple tools.
+Together, the version 2 cases exercise all five tools; graph-only cases use
+allowlists. All cases use the [extended vault snapshot](../../tests/vault_fixtures.md),
+the runner's default. The small tool-test fixture cannot answer the whole suite.
 
 | Version 2 case | Required tools | Focus |
 | --- | --- | --- |
@@ -78,16 +74,3 @@ single tool and use an allowlist.
 | `reference-based-calculation` **(hard)** | list, outgoing links, read | Three-note derivation with correlated dimensions |
 | `multipart-concept-application` **(hard)** | search, outgoing links, read | Grounding versus truth, dataset design, and repeated trials |
 | `source-caveat-preservation` **(hard)** | search, backlinks, read | Discover a MOC and synthesize a caveated knowledge workflow |
-
-These cases use the [extended knowledge snapshot](../../tests/vault_fixtures.md),
-which is also the runner's default vault. Required reads refer to full relative
-paths in that snapshot. The small fixture alone cannot answer the whole suite.
-All five registered tools are required at least once among the new cases;
-there is no additional listing-only case.
-
-The references are grounded in the sanitized notes, including their limitations.
-Numeric criteria distinguish distances from squared distances and best-of-k
-success from success on every trial.
-Semantic criteria evaluate answers; successful evidence gathering is checked
-separately using the execution trace. A scored candidate failure is useful benchmark
-evidence and does not by itself justify weakening the reference answer.

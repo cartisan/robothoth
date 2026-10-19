@@ -11,15 +11,15 @@ from pydantic import SecretStr, ValidationError
 
 from src.evaluation.config import EvaluationConfig
 from src.evaluation.judge import (
-    DEFAULT_JUDGE_PROMPT,
+    CONCISION_PROMPT,
+    CONTENT_PROMPT,
+    TASK_USEFULNESS_PROMPT,
     JudgeError,
     JudgeResponse,
     SemanticJudge,
-    grading_input,
 )
 from src.evaluation.reporting import model_configuration
 from src.gold_dataset.validate import GroundTruth
-from src.utils import SystemPrompt
 
 TRUTH = GroundTruth(ideal_answer="Essential meaning", answer_criteria=["Concise"])
 
@@ -46,9 +46,21 @@ def structured_response(raw: AIMessage, scores: Any) -> dict[str, Any]:
 def configured_judge(scores: Any) -> tuple[SemanticJudge, MagicMock, AIMessage]:
     model = MagicMock()
     raw = AIMessage(content="raw evidence")
-    model.with_structured_output.return_value.invoke.return_value = structured_response(
-        raw=raw, scores=scores
-    )
+    invocation = model.with_structured_output.return_value.invoke
+    invocation.return_value = structured_response(raw=raw, scores=scores)
+
+    def respond(input: list[Any]) -> dict[str, Any]:
+        """Return the scripted content response or the requested quality score."""
+        payload = json.loads(s=input[1].content)
+        if "expectations" in payload:
+            return invocation.return_value
+        key = payload["expectation_id"]
+        return structured_response(
+            raw=AIMessage(content=f"quality evidence: {key}"),
+            scores=[score(key=key, value=5)],
+        )
+
+    invocation.side_effect = respond
     return SemanticJudge(model=model), model, raw
 
 
@@ -64,12 +76,14 @@ def test_semantic_input_boundaries_and_expectation_order() -> None:
     assert [item.expectation_id for item in grade.scores] == [
         "ideal_answer",
         "answer_criteria[0]",
+        "quality.concision",
+        "quality.task_usefulness",
     ]
-    assert grade.raw_response is raw
-    messages = model.with_structured_output.return_value.invoke.call_args.kwargs[
-        "input"
-    ]
-    assert messages[0].content == DEFAULT_JUDGE_PROMPT.text
+    assert grade.judge_calls[0].raw_response is raw
+    messages = model.with_structured_output.return_value.invoke.call_args_list[
+        0
+    ].kwargs["input"]
+    assert messages[0].content == CONTENT_PROMPT.text
     payload = json.loads(messages[1].content)
     assert payload == {
         "request": "Question",
@@ -91,7 +105,7 @@ def test_strict_integer_scores_and_raw_preservation(value: Any) -> None:
     judge, _, raw = configured_judge([score(value=value), score("answer_criteria[0]")])
     with pytest.raises(JudgeError) as caught:
         judge.grade("Q", "A", TRUTH)
-    assert caught.value.raw_response is raw
+    assert caught.value.judge_calls[-1].raw_response is raw
     assert caught.value.__cause__ is not None
 
 
@@ -111,7 +125,7 @@ def test_invalid_coverage_or_explanation_invalidates_whole_grade(scores: Any) ->
     judge, _, raw = configured_judge(scores)
     with pytest.raises(JudgeError) as caught:
         judge.grade("Q", "A", TRUTH)
-    assert caught.value.raw_response is raw
+    assert caught.value.judge_calls[-1].raw_response is raw
 
 
 def test_parsing_and_invocation_failures() -> None:
@@ -123,13 +137,16 @@ def test_parsing_and_invocation_failures() -> None:
     }
     with pytest.raises(JudgeError, match="malformed") as caught:
         judge.grade("Q", "A", TRUTH)
-    assert caught.value.raw_response is raw
+    assert caught.value.judge_calls[-1].raw_response is raw
     failure = ConnectionError("offline")
     model.with_structured_output.return_value.invoke.side_effect = failure
     with pytest.raises(JudgeError) as caught:
         judge.grade("Q", "A", TRUTH)
     assert caught.value.__cause__ is failure
-    assert caught.value.raw_response is None
+    assert (
+        not caught.value.judge_calls
+        or caught.value.judge_calls[-1].raw_response is None
+    )
 
 
 @pytest.mark.parametrize(
@@ -145,7 +162,7 @@ def test_incomplete_judge_response_rejected(raw: AIMessage) -> None:
     model.with_structured_output.return_value.invoke.return_value["raw"] = raw
     with pytest.raises(JudgeError) as caught:
         judge.grade("Q", "A", TRUTH)
-    assert caught.value.raw_response is raw
+    assert caught.value.judge_calls[-1].raw_response is raw
 
 
 @pytest.mark.parametrize(
@@ -161,10 +178,11 @@ def test_incomplete_judge_response_rejected(raw: AIMessage) -> None:
 def test_expectation_ids_without_optional_fields(
     truth: GroundTruth, ids: list[str]
 ) -> None:
-    assert [
-        item["expectation_id"]
-        for item in grading_input("Q", "A", truth)["expectations"]
-    ] == ids
+    judge, _, _ = configured_judge(scores=[])
+    content_stage = judge._construct_content_grading_stage(
+        request="Q", final_answer="A", ground_truth=truth
+    )
+    assert content_stage.expected == ids
 
 
 def test_invalid_inputs_never_invoke_judge() -> None:
@@ -174,24 +192,17 @@ def test_invalid_inputs_never_invoke_judge() -> None:
     model.with_structured_output.assert_not_called()
 
 
-def test_custom_versioned_prompt_and_binding_options() -> None:
-    prompt = SystemPrompt(version=2, text="Custom grading rubric")
-    model = MagicMock()
-    model.with_structured_output.return_value.invoke.return_value = structured_response(
-        raw=AIMessage(content="grade"),
-        scores=[score(), score(key="answer_criteria[0]")],
-    )
+def test_bundled_content_prompt_and_binding_options() -> None:
+    _, model, _ = configured_judge(scores=[score(), score(key="answer_criteria[0]")])
     judge = SemanticJudge(
         model=model,
-        prompt=prompt,
         structured_output_kwargs={"method": "function_calling"},
     )
-    assert judge.prompt == prompt
     judge.grade(request="Q", final_answer="A", ground_truth=TRUTH)
-    messages = model.with_structured_output.return_value.invoke.call_args.kwargs[
-        "input"
-    ]
-    assert messages[0].content == prompt.text
+    messages = model.with_structured_output.return_value.invoke.call_args_list[
+        0
+    ].kwargs["input"]
+    assert messages[0].content == CONTENT_PROMPT.text
     assert judge.structured_output_kwargs["method"] == "function_calling"
     with pytest.raises(ValueError):
         SemanticJudge(MagicMock(), structured_output_kwargs={"include_raw": False})
@@ -266,6 +277,21 @@ def test_provider_parser_validates_scores_before_grading(
 
     def generate(self: Any, messages: Any, **kwargs: Any) -> ChatResult:
         """Return the scripted provider response as a LangChain generation."""
+        payload = json.loads(s=messages[1].content)
+        if "expectation_id" in payload:
+            quality_response = AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "JudgeResponse",
+                        "id": "quality-grade",
+                        "args": {
+                            "scores": [score(key=payload["expectation_id"], value=5)]
+                        },
+                    }
+                ],
+            )
+            return ChatResult(generations=[ChatGeneration(message=quality_response)])
         return ChatResult(generations=[ChatGeneration(message=response)])
 
     monkeypatch.setattr(target=type(judge.model), name="_generate", value=generate)
@@ -273,7 +299,9 @@ def test_provider_parser_validates_scores_before_grading(
     if isinstance(score_value, str):
         with pytest.raises(expected_exception=JudgeError) as caught:
             judge.grade(request="Q", final_answer="A", ground_truth=truth)
-        assert caught.value.raw_response.tool_calls == response.tool_calls
+        assert (
+            caught.value.judge_calls[-1].raw_response.tool_calls == response.tool_calls
+        )
     else:
         grade = judge.grade(request="Q", final_answer="A", ground_truth=truth)
         assert grade.scores[0].score == score_value
@@ -305,7 +333,10 @@ def test_binding_failure_chains_error() -> None:
     with pytest.raises(JudgeError) as caught:
         judge.grade("Q", "A", TRUTH)
     assert caught.value.__cause__ is error
-    assert caught.value.raw_response is None
+    assert (
+        not caught.value.judge_calls
+        or caught.value.judge_calls[-1].raw_response is None
+    )
 
 
 def test_parsed_pydantic_results_retain_validated_scores() -> None:
@@ -317,7 +348,7 @@ def test_parsed_pydantic_results_retain_validated_scores() -> None:
     )
     model.with_structured_output.return_value.invoke.return_value["parsed"] = parsed
     grade = judge.grade(request="Q", final_answer="A", ground_truth=TRUTH)
-    assert grade.scores == tuple(parsed.scores)
+    assert grade.scores[:2] == tuple(parsed.scores)
     assert grade.scores[0] is parsed.scores[0]
 
 
@@ -330,3 +361,170 @@ def test_provider_configuration_preserves_options_and_excludes_credentials(
     assert "fixture-secret-api-8174" not in json.dumps(snapshot)
     assert snapshot["settings"]["reasoning_effort"] == "medium"
     assert snapshot["settings"]["use_responses_api"] is True
+
+
+@pytest.mark.parametrize(
+    argnames="truth",
+    argvalues=[
+        GroundTruth(ideal_answer="Reference-only secret"),
+        GroundTruth(answer_criteria=["Case-only secret"]),
+        GroundTruth(
+            ideal_answer="Reference-only secret", answer_criteria=["Case-only secret"]
+        ),
+    ],
+)
+def test_each_stage_uses_fresh_messages_without_cross_grading_context(
+    truth: GroundTruth,
+) -> None:
+    """Keep rubric calls isolated even across repeated grades on the same judge."""
+    judge, model, raw = configured_judge(scores=[])
+    content_stage = judge._construct_content_grading_stage(
+        request="Locate a note", final_answer="a.md", ground_truth=truth
+    )
+    model.with_structured_output.return_value.invoke.return_value = structured_response(
+        raw=raw,
+        scores=[
+            score(key=expectation_id, value=3)
+            for expectation_id in content_stage.expected
+        ],
+    )
+    for _ in range(2):
+        grade = judge.grade(
+            request="Locate a note", final_answer="a.md", ground_truth=truth
+        )
+        assert [call.stage for call in grade.judge_calls] == [
+            "content",
+            "concision",
+            "task_usefulness",
+        ]
+        assert len(grade.scores) == len(content_stage.expected) + 2
+    calls = model.with_structured_output.return_value.invoke.call_args_list
+    assert len(calls) == 6
+    inputs = [call.kwargs["input"] for call in calls]
+    assert len({id(item) for item in inputs}) == 6
+    for index, messages in enumerate(inputs):
+        assert [message.type for message in messages] == ["system", "human"]
+        assert set(calls[index].kwargs) == {"input"}
+        stage = index % 3
+        if stage == 0:
+            assert messages[0].content == CONTENT_PROMPT.text
+            continue
+        prompt, key = (
+            (CONCISION_PROMPT, "quality.concision")
+            if stage == 1
+            else (TASK_USEFULNESS_PROMPT, "quality.task_usefulness")
+        )
+        assert messages[0].content == prompt.text
+        assert json.loads(s=messages[1].content) == {
+            "request": "Locate a note",
+            "final_answer": "a.md",
+            "expectation_id": key,
+        }
+        assert "Reference-only secret" not in messages[1].content
+        assert "Case-only secret" not in messages[1].content
+        other_key = "quality.task_usefulness" if stage == 1 else "quality.concision"
+        assert other_key not in messages[0].content
+        assert "quality evidence:" not in messages[1].content
+
+
+@pytest.mark.parametrize(argnames="stage_index", argvalues=[0, 1, 2])
+@pytest.mark.parametrize(
+    argnames="failure",
+    argvalues=[
+        "missing",
+        "duplicate",
+        "unknown",
+        "extra",
+        "fraction",
+        "blank",
+        "refusal",
+        "incomplete",
+        "invocation",
+    ],
+)
+def test_stage_failure_preserves_attempts_and_stops_later_calls(
+    stage_index: int,
+    failure: str,
+) -> None:
+    """Reject each stage independently and retain earlier and failing evidence."""
+    keys = ["ideal_answer", "quality.concision", "quality.task_usefulness"]
+    stages = ["content", "concision", "task_usefulness"]
+    raw = [AIMessage(content=f"response-{index}") for index in range(3)]
+    scores = [score(key=keys[stage_index])]
+    if failure == "missing":
+        scores = []
+    elif failure == "duplicate":
+        scores *= 2
+    elif failure == "unknown":
+        scores = [score(key="other-stage")]
+    elif failure == "extra":
+        scores.append(score(key="extra"))
+    elif failure == "fraction":
+        scores = [score(key=keys[stage_index], value=4.5)]
+    elif failure == "blank":
+        scores = [score(key=keys[stage_index], explanation=" ")]
+    elif failure == "refusal":
+        raw[stage_index] = AIMessage(content="", additional_kwargs={"refusal": "no"})
+    elif failure == "incomplete":
+        raw[stage_index] = AIMessage(
+            content="", response_metadata={"status": "incomplete"}
+        )
+    scripted: list[Any] = [
+        structured_response(raw=raw[index], scores=[score(key=keys[index])])
+        for index in range(stage_index)
+    ]
+    scripted.append(
+        ConnectionError("offline")
+        if failure == "invocation"
+        else structured_response(raw=raw[stage_index], scores=scores)
+    )
+    model = MagicMock()
+    model.with_structured_output.return_value.invoke.side_effect = scripted
+    judge = SemanticJudge(model=model)
+    with pytest.raises(expected_exception=JudgeError) as caught:
+        judge.grade(
+            request="Question",
+            final_answer="Answer",
+            ground_truth=GroundTruth(ideal_answer="Expected"),
+        )
+    error = caught.value
+    assert error.stage == stages[stage_index]
+    assert [call.stage for call in error.judge_calls] == stages[: stage_index + 1]
+    assert [call.raw_response for call in error.judge_calls[:-1]] == raw[:stage_index]
+    assert error.judge_calls[-1].raw_response is (
+        None if failure == "invocation" else raw[stage_index]
+    )
+    assert error.__cause__ is not None
+    assert (
+        model.with_structured_output.return_value.invoke.call_count == stage_index + 1
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="key", argvalues=["conversation", "previous_response_id"]
+)
+@pytest.mark.parametrize(
+    argnames="location",
+    argvalues=["binding", "binding_extra_body", "model_kwargs", "model_extra_body"],
+)
+def test_explicit_provider_conversation_state_is_rejected(
+    key: str,
+    location: str,
+) -> None:
+    """Prevent provider settings from attaching fresh messages to prior history."""
+    options: dict[str, Any] = {}
+    settings: dict[str, Any] = {"api_key": "test"}
+    if location == "binding":
+        options[key] = "previous-conversation"
+    elif location == "binding_extra_body":
+        options["extra_body"] = {key: "previous-conversation"}
+    else:
+        field = "model_kwargs" if location == "model_kwargs" else "extra_body"
+        settings[field] = {key: "previous-conversation"}
+    config = EvaluationConfig.model_validate(
+        obj={"judge": {"provider": "openai", "model": "judge", "settings": settings}}
+    )
+    with pytest.raises(expected_exception=ValueError, match="continuation IDs"):
+        SemanticJudge(
+            model=config.judge.create_model(), structured_output_kwargs=options
+        )

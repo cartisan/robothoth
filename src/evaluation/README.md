@@ -1,74 +1,52 @@
 # Evaluation
 
-The runner evaluates the entire validated gold dataset sequentially in file
-order, with independent conversations and grades for each repeat. Empty or
-invalid datasets are rejected before any model calls. Defaults are the bundled
-dataset and extended knowledge vault (`tests/extended_test_vault`), the existing
-harness prompt, one repeat, and 20 model
-invocations per conversation.
+The runner evaluates every [gold case](../gold_dataset/README.md) in file order,
+with a fresh candidate conversation for each repeat. Defaults: the bundled
+dataset, `tests/extended_test_vault`, one repeat, and 20 model invocations per
+conversation. Invalid or empty datasets fail before model calls.
 
-In Python:
+## Running evaluations
+
+```sh
+uv run --locked python -m src.evaluation.run --config evaluation.json \
+  --dataset-path src/gold_dataset/dataset.json --vault-path tests/extended_test_vault \
+  --repeats 3 --max-api-calls 20 --output-directory evaluation_runs
+```
+
+All flags are optional. The CLI loads credentials from `.env`.
 
 ```python
 from langchain_openai import ChatOpenAI
-from src.evaluation.judge import SemanticJudge
 from src.evaluation.runner import run_evaluation
-from src.harness import SYSTEM_PROMPT
 
 run = run_evaluation(
     candidate_model=ChatOpenAI(
         model="gpt-6-luna", reasoning_effort="medium", use_responses_api=True,
     ),
-    system_prompt=SYSTEM_PROMPT,
-    vault_path="tests/extended_test_vault",
-    judge=SemanticJudge(),
     repeats=2,
-    tool_binding_kwargs={"strict": True},
     report_destination="evaluation_runs",
 )
 print(run.run_directory)
 print(run.report["summary"])
 ```
 
-`SemanticJudge(model, prompt, structured_output_kwargs)` can also grade saved
-answers independently via `grade(request, final_answer, ground_truth)`, with
-`GroundTruth` from `src.gold_dataset.validate`. Both the harness and judge accept the shared
-immutable `SystemPrompt` model from `src.utils`, for example
-`SystemPrompt(version=2, text="Custom system instructions")`. It requires a
-strict positive integer version and nonblank text, rejects extra fields, and
-preserves text exactly. Bundled prompts start at version `1`; increment the
-respective version whenever its text changes. Versions are maintained manually,
-without CI enforcement.
+Pass `system_prompt=SystemPrompt(version=2, text="...")` from `src.utils` to
+customize candidate instructions. The judge uses the bundled `CONTENT_PROMPT`,
+`CONCISION_PROMPT`, and `TASK_USEFULNESS_PROMPT`; their text and versions are saved
+in reports.
 
-Custom prompts are available through the Python APIs: pass `system_prompt` to
-the harness or runner, and `prompt` to `SemanticJudge`. The judge receives only the request,
-answer, ideal answer, and semantic criteria, with stable expectation IDs. It
-receives no trace, candidate system prompt, model identity, or vault access.
+`SemanticJudge(model, structured_output_kwargs).grade(request, final_answer,
+ground_truth)` also grades saved answers. Import `SemanticJudge` from
+`src.evaluation.judge` and `GroundTruth` from `src.gold_dataset.validate`.
+The result exposes `scores` and `judge_calls`.
 
-The ideal answer is one expectation allowing paraphrases while requiring
-agreement on essential meaning; each criterion is another expectation. The
-version 1 prompt anchors scores at 1 (fails), 2 (major gaps), 3 (partial),
-4 (meets with minor issues), and 5 (fully meets). Missing or materially
-contradicted essential content requires a score of at most 3. Candidate text
-is evidence, never grading instructions. Scores must be strict integers, with
-one nonblank explanation per expected ID. Missing, duplicate, unknown, or
-malformed grades raise `JudgeError` retaining `raw_response`.
+## Model configuration
 
-`evaluate_tool_checks(tool_checks, trace)` independently returns each tool
-requirement's boolean result, explanation, and references using zero-based
-`invocation_index` and `tool_index` plus the original `call_id`. It performs no
-model calls or filesystem reads. A successful dispatcher envelope has exactly
-`ok: true` and `result` containing the registered tool's string or string-list
-result. Earlier failures do not negate a later successful call.
+The default candidate is OpenAI `gpt-6-luna`; the judge is OpenAI `gpt-6.1-sol`.
+Both use medium reasoning and the Responses API. The judge defaults to strict
+native JSON-schema output.
 
-CLI configuration is strict JSON with independent `candidate` and `judge`
-objects. Provider choices are `openai` and `anthropic`; `settings` forwards
-provider-specific LangChain constructor arguments. OpenAI defaults to Responses,
-which can be overridden for compatible providers. Model identifiers belong in
-`model`, rather than in `settings`.
-Each `ModelConfig` creates its configured model with `create_model()`, for example
-`EvaluationConfig().candidate.create_model()`.
-The CLI always uses the bundled system prompts for both candidate and judge.
+An optional config file selects each model independently:
 
 ```json
 {
@@ -87,77 +65,70 @@ The CLI always uses the bundled system prompts for both candidate and judge.
 }
 ```
 
-The default candidate uses OpenAI `gpt-6-luna` with `reasoning_effort: "medium"`
-and `use_responses_api: true`.
-The default judge uses OpenAI `gpt-6.1-sol`, `reasoning_effort: "medium"`,
-`use_responses_api: true`, and `method: "json_schema"` with `strict: true`.
-Structured output options can select a different provider-supported method;
-`include_raw` must stay true. External tools and schema overrides are rejected.
-Custom Python judge prompts should preserve the scoring anchors and semantic
-input boundary; their full text and integer version are recorded for later review.
+Providers are `openai` and `anthropic`; `settings` forwards provider constructor
+arguments. Keep the model identifier in `model`. Judge structured-output options
+must retain `include_raw=True`; external tools, schema overrides, and explicit
+conversation-continuation IDs are rejected.
 
-```sh
-uv run --locked python -m src.evaluation.run --config evaluation.json \
-  --dataset-path src/gold_dataset/dataset.json --vault-path tests/extended_test_vault \
-  --repeats 3 --max-api-calls 20 \
-  --output-directory evaluation_runs
-```
+## Scoring
 
-Every repeat has exactly one status:
+Each grade makes three sequential calls:
+
+| Stage | Supplied evidence | Expectation IDs |
+| --- | --- | --- |
+| Content | Request, final answer, ideal answer, case-specific criteria | `ideal_answer`, applicable `answer_criteria[i]` |
+| Concision | Request and final answer only | `quality.concision` |
+| Task usefulness | Request and final answer only | `quality.task_usefulness` |
+
+Each call starts with a fresh system/user message pair. Quality calls see only
+their own rubric and the request and answer, without reference material or other
+stages' results. Judges have no trace or vault access; tool requirements are
+checked separately and deterministically.
+
+Content scoring requires essential meaning and all case-specific criteria while
+accepting paraphrases. Concision rewards proportional detail without padding;
+necessary explanations can earn full marks. Task usefulness measures an
+appropriately scoped, formatted, and usable deliverable.
+
+Scores are integers: 1 fails, 2 has major gaps, 3 partially meets the requirement,
+4 meets it with minor issues, and 5 fully meets it. Missing or contradicted
+essential content scores at most 3. Each expectation needs one score and a short
+explanation; missing, duplicate, unknown, or malformed scores invalidate grading.
 
 | Status | Meaning |
 | --- | --- |
-| `passed` | All semantic scores are at least 4 and every tool check passes |
+| `passed` | Every content and quality score is at least 4 and every tool check passes |
 | `failed` | A valid grade or tool check fails a requirement |
 | `harness_error` | Execution fails to produce a valid final answer |
 | `judge_error` | Grading invocation or validation fails |
 
-Valid answers are graded even when tool checks fail. Errors preserve available
-artifacts and continue to later repeats. Errors make a run incomplete; scored
-failures do not. Pass rates are **passed / scored repeats**, excluding errors,
-and `null` when no repeat was scored. Case summaries report counts and pass
-rates, without an overall case verdict.
+Low scores and failed tool checks still allow all grading calls. Technical grading
+errors stop later stages and raise `JudgeError`, retaining the failed `stage` and
+all attempted `judge_calls`. Errors return no partial grade; evaluation continues
+to later repeats.
 
-Each run gets a unique directory containing `report.json` and `summary.md`.
-An initial incomplete report is written before execution, and both files are
-updated atomically after every repeat. Individual file replacement is atomic;
-JSON is authoritative if a reader observes different revisions between files.
-Under Repeats, the Markdown summary includes each tool check's pass/fail result,
-explanation, and trace-call references, plus every judge score and its full
-explanation. It also shows execution or grading errors and indicates when judge
-ratings are unavailable. Trace invocation and tool numbers are one-based in the
-summary; JSON indexes remain zero-based.
+Pass rates are **passed / scored repeats**, excluding errors, or `null` if nothing
+was scored. Errors make a run incomplete. CLI exit codes are 0 for all passes,
+1 for complete runs with scored failures, and 2 for incomplete runs or
+setup/persistence errors.
 
-The summary also records total suite cost and time, and each repeat's cost and
-time. Cost follows the harness convention of **tokens**, combining all candidate
-invocations and the judge response, with a separate breakdown for each model.
-Usage from failed grading validation still counts. A skipped judge costs zero;
-missing usage is `null` in JSON and `unknown` in Markdown, including affected
-totals. Errors remain part of the cost accounting even though pass rates exclude
-them. Cached and reasoning tokens are already included in provider totals and
-are not added again.
+## Reports
 
-`elapsed_seconds` uses a monotonic wall clock and includes tool execution and
-grading. Suite time starts at entry to `run_evaluation`, including dataset
-validation, run setup, and report updates between repeats, so it can exceed
-the sum of repeat times. The
-final snapshot measures time through the end of evaluation, before its own file
-write. JSON retains candidate, judge, and total token counts per repeat and in
-the count summaries, plus elapsed seconds for the suite and each repeat.
+Each run writes `report.json` and `summary.md` before execution and after every
+repeat. Files are replaced atomically; JSON is authoritative.
 
-Report format version `2` stores `candidate_system_prompt` and `judge_prompt` as
-`{version, text}` objects, with integer versions. This replaces the candidate
-prompt string and judge string version in report format version `1`.
-The report records identity, timestamps, case IDs and entry versions, dataset
-path, schema version, highest entry version as `gold_dataset_version`, both
-prompt configurations, credential-free model and binding configurations, harness
-settings, answers, traces, scores, tool evidence, raw judge responses, and errors.
-It does not copy the dataset or compute hashes. CLI exit codes are 0 for complete
-all-pass runs, 1 for complete runs with scored failures, and 2 for incomplete
-runs or setup/persistence errors.
+Report format `3` includes answers, scores, explanations, tool evidence, traces,
+credential-free configuration, and versioned prompt snapshots. `judge_prompt`
+stores the content prompt; `quality_judge_prompts` stores the two quality prompts.
+Each repeat's `judge_calls` records `{stage, raw_response}` in call order, using
+`null` when an attempted call produced no response.
 
-Saved answers and versioned grading prompts are independent of harness execution.
-Future calibration can reload the recorded dataset revision and regrade saved
-answers, then match expectation IDs against SME grades. Git must supply the
-corresponding historical dataset when expectations have changed. Calibration is
-not implemented.
+JSON and Markdown summaries include repeat and case pass rates, errors, token
+costs, and elapsed wall time. Cost means tokens, summed across candidate calls
+and all attempted judge calls, including failed grading. If no judge calls are
+attempted, judge cost is zero; unknown usage is `null` in JSON and `unknown` in
+Markdown.
+`elapsed_seconds` includes tool execution, grading, and suite overhead.
+
+Dataset contents are not embedded in reports. Use the corresponding Git revision
+when regrading historical answers against their original expectations.

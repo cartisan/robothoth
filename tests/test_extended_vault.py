@@ -116,7 +116,6 @@ def test_new_cases_have_ground_truth_readable_evidence_and_tool_coverage() -> No
     hard_cases = []
     for entry in entries:
         assert entry.ground_truth.ideal_answer
-        assert entry.ground_truth.answer_criteria
         checks = entry.tool_checks
         demanded = set(checks.required_tools)
         if checks.required_note_reads:

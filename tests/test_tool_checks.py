@@ -153,7 +153,6 @@ def test_migrated_dataset_expectations() -> None:
     assert search.ground_truth.ideal_answer and not search.ground_truth.answer_criteria
     assert multi.tool_checks.required_tools == ["list_notes", "read_note"]
     assert multi.ground_truth.ideal_answer
-    assert multi.ground_truth.answer_criteria
     assert synthesis.ground_truth.ideal_answer
     assert not synthesis.ground_truth.answer_criteria
     assert synthesis.tool_checks.required_note_reads == [

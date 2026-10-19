@@ -12,6 +12,16 @@ than narrating implementation steps, and keep docstrings consistent with the cod
 Prefer positional-or-keyword parameters over keyword-only `*` parameters unless
 the interface has a concrete need to require keyword arguments.
 
+# Data models
+
+Prefer named Pydantic models over positional tuples or dictionaries when data has
+a stable structure with more than 3 fields. Use nested models where necessary.
+
+# Inline comments
+
+Add concise inline comments explaining model fields whose purpose or relationships
+are not obvious, and the purpose of non-obvious data transformations.
+
 # Validation and defensive coding
 
 Validate untrusted data at its boundary, then trust validated models, annotated
@@ -23,9 +33,24 @@ Keep checks for meaningful value constraints, external responses, filesystem
 boundaries, and operational failures. Copy mutable data only when mutation or
 snapshot ownership requires it.
 
+Keep class-specific construction and validation helpers as private methods on the
+owning class. Use descriptive names such as `_construct_content_grading_stage`
+and `_validate_scores`.
+
+Extract cohesive validation blocks into documented methods. Describe accepted
+inputs, edge cases, and exceptions.
+
 # Function and method calls
 
 Always use explicit keyword arguments for all function and method calls.
+
+# Refactoring
+
+For behavior-preserving refactors, adapt existing tests rather than adding tests
+that merely mirror the new structure.
+
+When editing Markdown documentation, replace outdated facts with the current
+facts directly. Do not narrate that something was changed or updated.
 
 # Package layout and execution
 
@@ -39,12 +64,6 @@ named modules with an `if __name__ == "__main__"` guard, invoked as
 
 When changing a bundled `SystemPrompt`'s text, increment its positive integer
 version, normally by one. Versions are independent for each prompt .
-
-# Markdown documentation
-
-When editing Markdown documentation, replace outdated facts with the current
-facts directly. Do not narrate that something was changed or updated.
-
 # Gold dataset entries
 
 Name each case `id` after its evaluation purpose or the assistant behavior being
