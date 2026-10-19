@@ -34,4 +34,4 @@ dist/
 /.idea/vcs.xml
 
 # evaluation results
-evaluation_runs/*
+src/evaluation/evaluation_runs/*
