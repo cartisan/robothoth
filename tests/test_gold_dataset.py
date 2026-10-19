@@ -246,8 +246,10 @@ def test_default_dataset_is_independent_of_cwd(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     items = load_dataset()
-    assert len(items) == 3
-    assert all(item.dataset_version == 1 for item in items)
+    assert len(items) == 14
+    assert [item.dataset_version for item in items] == [1] * 3 + [2] * 11
+    assert load_dataset(version=1) == items[:3]
+    assert load_dataset(version=2) == items
 
 
 def test_cli_success_and_failure(tmp_path: Path) -> None:
@@ -280,4 +282,4 @@ def test_cli_default_dataset() -> None:
         check=False,
     )
     assert result.returncode == 0
-    assert "3" in result.stdout
+    assert result.stdout.strip() == "Validated 14 gold dataset entries"

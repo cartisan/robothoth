@@ -39,3 +39,20 @@ named modules with an `if __name__ == "__main__"` guard, invoked as
 
 When changing a bundled `SystemPrompt`'s text, increment its positive integer
 version, normally by one. Versions are independent for each prompt .
+
+# Markdown documentation
+
+When editing Markdown documentation, replace outdated facts with the current
+facts directly. Do not narrate that something was changed or updated.
+
+# Gold dataset entries
+
+Name each case `id` after its evaluation purpose or the assistant behavior being
+tested, rather than the subject matter of the retrieved notes. Prefer three
+lowercase parts delimited by hyphens, such as `multi-source-integration`.
+
+Write each `added_reason` as an evaluation rationale: why the case belongs in
+the dataset and which assistant capability, behavior, or failure mode it tests.
+Describe the intended coverage rather than summarizing the source notes or
+repeating facts from the expected answer. Put answer expectations in
+`ground_truth` and deterministic tool requirements in `tool_checks`.

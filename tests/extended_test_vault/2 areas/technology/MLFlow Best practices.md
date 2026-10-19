@@ -1,0 +1,11 @@
+- When you delete a run or experiment, they won't be deleted from the server disk and will only be labeled as _deleted_ on _lifecycle_stage_ of _meta.yaml_ file. To restore the run or experiment:`mlflow experiments restore --experiment-id <experiment_id>` (same for run)
+- What to track:
+	- Params: all vs. ones being tuned
+	- Metrics: train & val metrics, objective
+	- Artifacts: complex metadata, serialized model
+	- Tags: provenance, simple metadata
+- Repeatability:
+	- code checkpoints
+	- environments
+	- data sets
+- What goes into one experiment, what goes to separate experiments

@@ -21,8 +21,16 @@ available as `execute_openai()`, `execute_claude()`, and `execute_kimi()` in
 `src.main`.
 
 The manually maintained [gold dataset](src/gold_dataset/README.md) contains
-validated evaluation cases. Run `uv run --locked python -m src.golden_dataset.validate` to
+14 validated evaluation cases, including five hard cases requiring multiple notes
+and tools. Run `uv run --locked python -m src.gold_dataset.validate` to
 validate the bundled file and print its case count.
+
+Evaluations default to `tests/extended_test_vault`: 152 sanitized knowledge notes
+covering general reference material, cement knowledge, and anonymized work
+practices. Company-specific algorithms, actual customer information, experiment
+reports, credentials, and private images are excluded. The 14-note
+`tests/test_vault` remains the fixture for focused tool tests
+and the `src.main` examples. See [vault provenance and boundaries](tests/vault_fixtures.md).
 
 Pass a configured, tool-capable LangChain `BaseChatModel` directly:
 
@@ -57,7 +65,7 @@ Evaluate all gold cases with an independently configured judge:
 ```sh
 uv run --locked python -m src.evaluation.run --output-directory evaluation_runs
 uv run --locked python -m src.evaluation.run --config evaluation.json \
-  --dataset-path src/golden_dataset/dataset.json --vault-path tests/test_vault \
+  --dataset-path src/gold_dataset/dataset.json --vault-path tests/extended_test_vault \
   --repeats 3 --max-api-calls 20 \
   --output-directory evaluation_runs
 ```

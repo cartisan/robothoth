@@ -1,0 +1,1458 @@
+{
+  "snapshot_version": 2,
+  "source": "Sanitized knowledge fixture derived from a private Obsidian vault",
+  "created_at": "2026-10-19T12:07:05.449442+00:00",
+  "note_count": 152,
+  "attachment_count": 0,
+  "selection": {
+    "included": "General reference knowledge, cement knowledge, and anonymized work practices.",
+    "excluded": "Company-specific algorithms, actual customer information, experiment reports, credentials, and private images.",
+    "identity_policy": "Private identities and infrastructure coordinates use placeholders; public tools and cited public authors retain their names."
+  },
+  "redactions": [
+    {
+      "path": "2 areas/ai engineering/evaluation/RAG.md",
+      "reason": "API credential replaced with a placeholder."
+    },
+    {
+      "path": "2 areas/technology/dynamic environment.md",
+      "reason": "Connection and secret examples use placeholders only."
+    },
+    {
+      "path": "2 areas/technology/Docker Desktop.md",
+      "reason": "Account identity replaced with a placeholder."
+    }
+  ],
+  "files": [
+    {
+      "path": "2 areas/ai engineering/Agentic Software Engineering Factory.md",
+      "kind": "note",
+      "sha256": "aeaf77daa9fd7d9ad1d73d654c3cbe6eb62eaabd2072d40f1e442e58d872e9de"
+    },
+    {
+      "path": "2 areas/ai engineering/LLM Best Practices.md",
+      "kind": "note",
+      "sha256": "cdd5dfade27101e5f80e2c293c826f7d6753a14b46b45bee69cb234638b0c923"
+    },
+    {
+      "path": "2 areas/ai engineering/LLM Usage Ideas.md",
+      "kind": "note",
+      "sha256": "0eb914aeaa03ce687a38628e4976281539570f70f2470c8687af6f160d2907ae"
+    },
+    {
+      "path": "2 areas/ai engineering/Open Weights Model Frameworks.md",
+      "kind": "note",
+      "sha256": "3edc2d997944b33c2bff029d2e14bde952645d3db33338b02648d3018edac628"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/AI Evaluation Fundamentals.md",
+      "kind": "note",
+      "sha256": "e0cd225ac2775fb39cb0698969b975e4feba251f59d47dbcdaa0262840b54ac0"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/AI Evaluation Metrics.md",
+      "kind": "note",
+      "sha256": "3a1de562b2248dda82268cc407e752e4a6064d373a5de3092a63a52429ceb60a"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/AI Evaluation System Roadmap.md",
+      "kind": "note",
+      "sha256": "b8aa51a04a17f60f19600464d465c4381a407a0292afc315a4a94389d4075c90"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/Evaluation Methods.md",
+      "kind": "note",
+      "sha256": "40b3af8c8e3f77ae99dc8be38137b9d20831866af8e71041ea6f4a4be4add524"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md",
+      "kind": "note",
+      "sha256": "8985aef36a7a266333583f300bbed557338777531f3e5a37c6315ab133d16cfa"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/LLM-as-a-Judge.md",
+      "kind": "note",
+      "sha256": "b8324be77656f8388f47b75b7adfddd8f159a56f1bb22170876ab9c92f79f560"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/Pragmatic Engineer on LLM evals.md",
+      "kind": "note",
+      "sha256": "469259896c65718914faef4c2de0dc961f06b4d7ab9686e8495ec31f11b09266"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/RAG Evaluation.md",
+      "kind": "note",
+      "sha256": "3436b12723453df8d436235d48f0df381722d7b64724952504384332d23be781"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/RAG.md",
+      "kind": "note",
+      "sha256": "0d0133440536c47f7ca78bcc76a25df8f25008492c5af7fb9d570608902f3771"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/Rubric Based Evaluation.md",
+      "kind": "note",
+      "sha256": "39b3498e6204743285a1b8bf3b511f9c35522c278ed34084e2043e2185459dad"
+    },
+    {
+      "path": "2 areas/ai engineering/evaluation/z> MOC AI Evaluation.md",
+      "kind": "note",
+      "sha256": "81c8b3b5572b65deeb4ae82b710341f9ed8dc17e39f7d077cafa9a2bab56c5a8"
+    },
+    {
+      "path": "2 areas/engineering/Deploying should never be scary.md",
+      "kind": "note",
+      "sha256": "e337fdb353745ea501a661c742119453c0cebc325cde91c6d641f2ccded01971"
+    },
+    {
+      "path": "2 areas/engineering/Exception logging patterns.md",
+      "kind": "note",
+      "sha256": "d894b8fe1f46871903cb03255852dc9ccf6e2ea1e8e074fdddf86072fd9500ae"
+    },
+    {
+      "path": "2 areas/engineering/Friction is the difference between the model and the world.md",
+      "kind": "note",
+      "sha256": "5f48c45af2fff09301957ae0ea5ba0c89ed1961fb3a4b1abe9719f46a7fb31e8"
+    },
+    {
+      "path": "2 areas/engineering/Project names should be memorable, not descriptive.md",
+      "kind": "note",
+      "sha256": "260e05f105659a0217676d5b99a54747f61bef189274415bda4d55f363bbddc5"
+    },
+    {
+      "path": "2 areas/engineering/Structure should follow developer mental model, not cleanness.md",
+      "kind": "note",
+      "sha256": "d1eaa1d9a2d6f9f4c5ee6078203444239a166292877393ac34c8e929562c6ba9"
+    },
+    {
+      "path": "2 areas/engineering/Tech debt is a useful concept when making the choice to invest in a particular effort now vs. wait for the future.md",
+      "kind": "note",
+      "sha256": "2f640b2a559b23c78b14136210173a35d7334414fb960daffaab0567f92fd756"
+    },
+    {
+      "path": "2 areas/machine learning/Bias Variance Tradeoff.md",
+      "kind": "note",
+      "sha256": "edb3632558b9978e05626ac384c2f60a3846e79fb166532c61b60fc582a3754e"
+    },
+    {
+      "path": "2 areas/machine learning/Covariance - a measure of the joint variability of two variables.md",
+      "kind": "note",
+      "sha256": "bd04e7879fdf94afd6b3b7979d6aebbfa7eaae6ba9884d06b9aa3c5f556cc5f5"
+    },
+    {
+      "path": "2 areas/machine learning/Data Distribution Shifts.md",
+      "kind": "note",
+      "sha256": "403941446d2d3d205da15504c3de8a264094eb0884b36fe7c823f240ef71764b"
+    },
+    {
+      "path": "2 areas/machine learning/Degenerate Feedback Loops.md",
+      "kind": "note",
+      "sha256": "f43742ef4e066626a5906b51681c2e17c56ef913879c04c142dc9eb9cc99154e"
+    },
+    {
+      "path": "2 areas/machine learning/ElasticNet.md",
+      "kind": "note",
+      "sha256": "292d966d29f38c24641eb0b67b1215306e48a5015cab062041e1ddc35e567346"
+    },
+    {
+      "path": "2 areas/machine learning/Exploratory Data Analysis.md",
+      "kind": "note",
+      "sha256": "51066d1751748dde102f58705d0fa8d8be608e7475fa5f1ab0975574dc0c62c8"
+    },
+    {
+      "path": "2 areas/machine learning/Extra Trees Classifier.md",
+      "kind": "note",
+      "sha256": "60e755a0d98bd656ea8ea4ad755a035c7557e2dd1c90638b2910c3d99568a244"
+    },
+    {
+      "path": "2 areas/machine learning/Feature order matters for tree based transformers.md",
+      "kind": "note",
+      "sha256": "f9fa9c867271cf69f5949a460acfa0cb4151b1c303925e115c9cabde31319aba"
+    },
+    {
+      "path": "2 areas/machine learning/High performance features should be disregarded when they lead to drifts.md",
+      "kind": "note",
+      "sha256": "dc7edc13c13cdc8f0045609add3d05f35fb063ea9f0a234e5573f529550456bb"
+    },
+    {
+      "path": "2 areas/machine learning/Hyper Parameter Optimization.md",
+      "kind": "note",
+      "sha256": "337cd05c37b294b693dcfeeaf25d21ef4198a1d154495a5ff3d3d6e365ed29bf"
+    },
+    {
+      "path": "2 areas/machine learning/LangChain.md",
+      "kind": "note",
+      "sha256": "60ccc4370e0e9fa6564753ea4ae2b92337cd22a3aa8a9dfe5811e63a3a4de6b5"
+    },
+    {
+      "path": "2 areas/machine learning/ML for Time Series.md",
+      "kind": "note",
+      "sha256": "bd00938094876b229590c94f7c716e670026cabec9d0bced387b4c44ea3290de"
+    },
+    {
+      "path": "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md",
+      "kind": "note",
+      "sha256": "f5a86802ff0214bd00c73c19d95d61ca4681162be575d13f5494de6e897e1414"
+    },
+    {
+      "path": "2 areas/machine learning/Monitoring and Observability.md",
+      "kind": "note",
+      "sha256": "99a86463435a34bb98ac435c39a4b5149bb3b54982be58b25132f5e138f9eb90"
+    },
+    {
+      "path": "2 areas/machine learning/Outlier filtering.md",
+      "kind": "note",
+      "sha256": "90c160100b5bdd1184efda8a885019a53fdc409d4c016ea84345f3701fda472f"
+    },
+    {
+      "path": "2 areas/machine learning/Polynomial Features.md",
+      "kind": "note",
+      "sha256": "8bd77e51d85038c63a24e0c0abeb53009cc2615e7c93e3e7e54d379273f265e6"
+    },
+    {
+      "path": "2 areas/machine learning/Post Mortem - Incident Report.md",
+      "kind": "note",
+      "sha256": "a4e31124d260a8a4d52cf8babf7cec3b9a5c59ee18ef92c09c97caaeb303a7e1"
+    },
+    {
+      "path": "2 areas/machine learning/Random Forrests.md",
+      "kind": "note",
+      "sha256": "8766079108349a87d9b90987437c598db50554afcdcb0bef76b811e23ca4b02e"
+    },
+    {
+      "path": "2 areas/machine learning/Regression Loss.md",
+      "kind": "note",
+      "sha256": "f38e68918a2326d7ec9602c49a790471c4238420bdb7b4040cfb7880b480569b"
+    },
+    {
+      "path": "2 areas/machine learning/R² -Coefficient of Determination.md",
+      "kind": "note",
+      "sha256": "4985b0c8f9bccf93aed75f987f9acf5b7a67e0643e3ac41772aa8bae46faa83f"
+    },
+    {
+      "path": "2 areas/machine learning/Unpickling sklearn models does not execute their initialization method.md",
+      "kind": "note",
+      "sha256": "d7340cd811317c88f4deff4b2deea8359b15ba5e34ccfaf8623286b305e3b0d6"
+    },
+    {
+      "path": "2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md",
+      "kind": "note",
+      "sha256": "53c7e983a29834b9e420dd375bc2fe97619bdfa137d8c47c0f4650f8524014b8"
+    },
+    {
+      "path": "2 areas/machine learning/ç.md",
+      "kind": "note",
+      "sha256": "822944deaee3251dfb28493fcfc7ed2a7a22bd93ba0a5edd1ea3fd3f774d5178"
+    },
+    {
+      "path": "2 areas/machine learning/z> MOC ML.md",
+      "kind": "note",
+      "sha256": "e1b50de2d1070e0c5588aa48fc95414ad61656c230f7547dfe534e3957977c05"
+    },
+    {
+      "path": "2 areas/soft skills/Building Trust with People.md",
+      "kind": "note",
+      "sha256": "ca4ba6d42f89789fcdcdb70d58561d6cff122a6466d53237b9e7103c0ab7b731"
+    },
+    {
+      "path": "2 areas/soft skills/CAR Method.md",
+      "kind": "note",
+      "sha256": "d282b7ff2d47ec878bde69ff8e66113a3a5881321c9c9250e624eebbd3611516"
+    },
+    {
+      "path": "2 areas/soft skills/Feedback Workshop.md",
+      "kind": "note",
+      "sha256": "f37f69fd5f8a22dee3f3468ce2042958315cf67923b5da0def05e8f51d217d78"
+    },
+    {
+      "path": "2 areas/soft skills/Finding bugs.md",
+      "kind": "note",
+      "sha256": "68a829eb4eafe09aad7f143277319857047d79db3a96e3eba9e8e6ec2f2807e0"
+    },
+    {
+      "path": "2 areas/soft skills/Giving MR Reviews.md",
+      "kind": "note",
+      "sha256": "cba05f08e7b37fe1f93461cc4d02922b72ca2c63628f0becddaca31557e6a422"
+    },
+    {
+      "path": "2 areas/soft skills/Giving Performance Reviews.md",
+      "kind": "note",
+      "sha256": "4a5a87fce1f24e089dcde867e0fad6739c35e1b65799066625335dafbbc5d385"
+    },
+    {
+      "path": "2 areas/soft skills/Goal Setting.md",
+      "kind": "note",
+      "sha256": "a1fb7cb05228efbb48726ca784b0e8b2239a998546e9f5e491abd60203874237"
+    },
+    {
+      "path": "2 areas/soft skills/Interview Workshop A.md",
+      "kind": "note",
+      "sha256": "7f254fae4fc6c3464d038640bb0ab050ae2e2873d5ed38278c667d4c3fb67cec"
+    },
+    {
+      "path": "2 areas/soft skills/Interview Workshop B.md",
+      "kind": "note",
+      "sha256": "8cb03846604f53b7bb0c03d771f95271eb82561113dd1d39c5dbef813b867f09"
+    },
+    {
+      "path": "2 areas/soft skills/Knowledge work should accrete.md",
+      "kind": "note",
+      "sha256": "ad141c690b3ee3abb021fdbaf0a31f9034b252a8ed902f27c422401a76acc3f4"
+    },
+    {
+      "path": "2 areas/soft skills/Lateral Leadership.md",
+      "kind": "note",
+      "sha256": "b42fa7cd356d78cdc89da331ec30e107893c65d37c0a5bed474ccf78753ecc84"
+    },
+    {
+      "path": "2 areas/soft skills/Mentoring.md",
+      "kind": "note",
+      "sha256": "5e2327e2d00a1f6f732ff51afdaf18678fe7047ab34a2451b8e0819c568918a2"
+    },
+    {
+      "path": "2 areas/soft skills/Mob programming.md",
+      "kind": "note",
+      "sha256": "0bbbe0f1fddf43bef9658626418053b03af25012d2f73019142303c42c157b23"
+    },
+    {
+      "path": "2 areas/soft skills/Note taking is thinking.md",
+      "kind": "note",
+      "sha256": "609e4649b4974ba5feae704d931a294877719d7c2ea52998c675f83d1286e318"
+    },
+    {
+      "path": "2 areas/soft skills/Performance Self Review.md",
+      "kind": "note",
+      "sha256": "a627f23404c42bdd5df5512a04ec1e335d03b9830111fc18fd74eeca1e77a9b5"
+    },
+    {
+      "path": "2 areas/soft skills/Quantify the wins of your work, as soon as you have done it.md",
+      "kind": "note",
+      "sha256": "ec18002bd4f5a3cee64a906ac472420ff8f6aa34a0f5e4d2b7c774ca64fef2e8"
+    },
+    {
+      "path": "2 areas/soft skills/Staff Engineer Archetypes.md",
+      "kind": "note",
+      "sha256": "e44a036edc6e26854c52e2ca87ed3852ef92a1ca5d11ac53c51d6e07da26193d"
+    },
+    {
+      "path": "2 areas/soft skills/Story Telling for State Change.md",
+      "kind": "note",
+      "sha256": "4014600f4fae74d4e96676de42d4ff6e0ef3e1dafab5e15453f511e77a64b5db"
+    },
+    {
+      "path": "2 areas/soft skills/The goal of a good senior software engineer is to reduce entropy.md",
+      "kind": "note",
+      "sha256": "11530a7c8e52e89d85b394ea869d2fb2f7971306fe53fa14769a0b3248e8a80d"
+    },
+    {
+      "path": "2 areas/soft skills/To increase impact run towards the fire and prioritize ruthlessly.md",
+      "kind": "note",
+      "sha256": "4b058b442d6a92696daa8bfc89fced21243005c1af41166d9b68639077e0e33b"
+    },
+    {
+      "path": "2 areas/soft skills/What's the Point of Managers.md",
+      "kind": "note",
+      "sha256": "7cf98b589bf571fea78ae86c24fd2e67cdec81bef7d18f39a2f3a251375489d1"
+    },
+    {
+      "path": "2 areas/soft skills/Work Log.md",
+      "kind": "note",
+      "sha256": "0cdd600ca2a264cf4d76ce106f91a98cf5ab0a3f9ac48006e0f054abf67b0980"
+    },
+    {
+      "path": "2 areas/soft skills/z MOC Hiring.md",
+      "kind": "note",
+      "sha256": "c8965f3aeae0682b4e530cb4b364557132988871b1526c17d62374709777612e"
+    },
+    {
+      "path": "2 areas/soft skills/z MOC Personal Knowledge Management.md",
+      "kind": "note",
+      "sha256": "a27ad2200791c32786af68903ff4dfc26d3d3b220f7d6be472adea4724a9cd1f"
+    },
+    {
+      "path": "2 areas/technology/Apps.md",
+      "kind": "note",
+      "sha256": "341cb8d3a1801b22f1cc761cce9b8c27cf8abfaae255e5d5be92eff8c27c589f"
+    },
+    {
+      "path": "2 areas/technology/Docker Desktop.md",
+      "kind": "note",
+      "sha256": "c7123fb964c3bab984457a370317cd2d390c7e582e1ffcc609c50663f3c86dcb"
+    },
+    {
+      "path": "2 areas/technology/Grafana time series plots require data to be grouped over time.md",
+      "kind": "note",
+      "sha256": "9c44c4859182a80c1341232e14214993e8ef409217c16127406420b6b353c869"
+    },
+    {
+      "path": "2 areas/technology/Hera.md",
+      "kind": "note",
+      "sha256": "f22721d312c8519e18fc02960092902cbfbe4a63851349a0dccd500fda9d8b3a"
+    },
+    {
+      "path": "2 areas/technology/MLFlow Best practices.md",
+      "kind": "note",
+      "sha256": "97fe36817bcac9fc4a34337b3f9488132faa349a8f7720ff6d87e10aecccc8ff"
+    },
+    {
+      "path": "2 areas/technology/Migrations using alembic.md",
+      "kind": "note",
+      "sha256": "90cdda1f4be21548980f2c16f3019e7ca5dd6293cb92eb4018fff5967100655f"
+    },
+    {
+      "path": "2 areas/technology/OpenLens.md",
+      "kind": "note",
+      "sha256": "4b4f86dd42927cfa8d7e67cef71c57e7a316fe5c3f48bff09caff339bdd99a07"
+    },
+    {
+      "path": "2 areas/technology/Pandas query() method for more readable data selection.md",
+      "kind": "note",
+      "sha256": "0f855a1ca750d52f8366766608d687e6bba5af29e8d66f81b6db1077e4a33e7b"
+    },
+    {
+      "path": "2 areas/technology/Professional grade mypy configuration.md",
+      "kind": "note",
+      "sha256": "1bf9f619fe2f8ae3f6cc083860f360a31186bd1b5929e3db6bff3faab3b3e4c6"
+    },
+    {
+      "path": "2 areas/technology/Pydantic validation fails when saving to db from pydantic object.md",
+      "kind": "note",
+      "sha256": "cfc72ee416ba3d0101587f2078f038220de97604c4694164b9f81bc751fd76fa"
+    },
+    {
+      "path": "2 areas/technology/SQL.md",
+      "kind": "note",
+      "sha256": "5f30ed80a654772412a3dc661a4ee555a26999fc95f283120aa3293653d88576"
+    },
+    {
+      "path": "2 areas/technology/Upgrade package for safety that is not directly imported.md",
+      "kind": "note",
+      "sha256": "27a38d7c2a6a6b1bb4b1cf9c8c5cdaf443851154865d666646706ec8f2ec0215"
+    },
+    {
+      "path": "2 areas/technology/bottom.md",
+      "kind": "note",
+      "sha256": "536ddc1329e0dc78769d29cd3fb61ecc116b55b38cdd653caaa8a588a031881b"
+    },
+    {
+      "path": "2 areas/technology/docker.md",
+      "kind": "note",
+      "sha256": "9d246b6ad0eb9446ebc8387a9e38c9e4e9a417d0db23862e06db65005eda7bb6"
+    },
+    {
+      "path": "2 areas/technology/dotenv.md",
+      "kind": "note",
+      "sha256": "bfdbc77aa11731442df680953496ceb8065d9e7ad75363ec531e192a664bb4ab"
+    },
+    {
+      "path": "2 areas/technology/dynamic environment.md",
+      "kind": "note",
+      "sha256": "d2ad5d643bd5544a442eac5d9fbc594e6921e72dea24bd7c38b4e950aa0e9b07"
+    },
+    {
+      "path": "2 areas/technology/eza.md",
+      "kind": "note",
+      "sha256": "502b1e73204e5ca593f5a851c59dd64dd7204dc39803e02c7e339dc94acf5528"
+    },
+    {
+      "path": "2 areas/technology/fuck.md",
+      "kind": "note",
+      "sha256": "764e8e2eb4f1210ca097179dbadafe01c42cfceceb96b6107250feeeb409eec8"
+    },
+    {
+      "path": "2 areas/technology/hoard.md",
+      "kind": "note",
+      "sha256": "6ed4268dadff9effceb63184300d3cb214e5b95bc4e9a7b6458def9eb3b16143"
+    },
+    {
+      "path": "2 areas/technology/kdash.md",
+      "kind": "note",
+      "sha256": "41a39c717d6e1e38f9bd496c6af681ab6dee7c5c33f59a057f2696ce18b71f3d"
+    },
+    {
+      "path": "2 areas/technology/kubernetes.md",
+      "kind": "note",
+      "sha256": "7982d5403f58f713e65c69cd5c3f14b11b54f90a49e237552bf2c47eff7db5d4"
+    },
+    {
+      "path": "2 areas/technology/langchain vs boto.md",
+      "kind": "note",
+      "sha256": "882d2f40fc8ac3b7c41b44a0403288aef0d8941ca194f6b65be7db78f70d8cd3"
+    },
+    {
+      "path": "2 areas/technology/lineaPy.md",
+      "kind": "note",
+      "sha256": "876c7ae02d937d2e5684a2f6525fcf070500c9d196df4eced99e4f495ece8a3d"
+    },
+    {
+      "path": "2 areas/technology/numpy.md",
+      "kind": "note",
+      "sha256": "70981de8e1eb85522db6d7f3b38595ad33c08c83d3080fb4f7ffc18f291b00ef"
+    },
+    {
+      "path": "2 areas/technology/obsidian.md",
+      "kind": "note",
+      "sha256": "18303d946cebbea3bcb4c15ebd708e1b36e61ef1f08912068b38981c51982243"
+    },
+    {
+      "path": "2 areas/technology/pandas.md",
+      "kind": "note",
+      "sha256": "26428ed038282e949c474f68de88db76d68b8bffdc946edef7b9534521452225"
+    },
+    {
+      "path": "2 areas/technology/pipenv.md",
+      "kind": "note",
+      "sha256": "5a8135c1f7f49bd94bc9b64950dfab01e54fc5fadcdcbc512f0c72c20bcf35c7"
+    },
+    {
+      "path": "2 areas/technology/pyenv.md",
+      "kind": "note",
+      "sha256": "22b9ae13130323ba995d66b1a30b8c5c9aaee0b2bd1f936a1d3698603f2317cd"
+    },
+    {
+      "path": "2 areas/technology/pytest.md",
+      "kind": "note",
+      "sha256": "1641279e919f45d274c264767745fb361a901d2d853103d40a96211a7b943588"
+    },
+    {
+      "path": "2 areas/technology/python 3.10.md",
+      "kind": "note",
+      "sha256": "4afe04c38fbb7bda72e0243b4347069b26879b8ff5b20809b18c81b34c1e4578"
+    },
+    {
+      "path": "2 areas/technology/python 3.11.md",
+      "kind": "note",
+      "sha256": "dec5cd2ded51e844e3ad2d2f82071be897a3093d2cc795eb5400629c7039610b"
+    },
+    {
+      "path": "2 areas/technology/pyvenv_activate.md",
+      "kind": "note",
+      "sha256": "bbe12529e75c44dca3704398f42aadc852cbfb9329b126d020869fec8c62fecd"
+    },
+    {
+      "path": "2 areas/technology/scikit-learn.md",
+      "kind": "note",
+      "sha256": "93da6c501c74abcaab3bdebfbdd32fa5fa172c8f43353c3e1f66d1f19b485b4e"
+    },
+    {
+      "path": "2 areas/technology/starship.md",
+      "kind": "note",
+      "sha256": "03594b06fd080e1acc155aed0600632285a08eb997544f2efcf935266f4f0764"
+    },
+    {
+      "path": "2 areas/technology/terraform.md",
+      "kind": "note",
+      "sha256": "775f2d0614fcc343988f363ddbc064195f4deb344ad4d77862cc0d89e16f9584"
+    },
+    {
+      "path": "2 areas/technology/uv.md",
+      "kind": "note",
+      "sha256": "f2b0bc1dadf16ac04e0f89fa4c43d6632efa439294a6ee89264a29d8b4c0d8fa"
+    },
+    {
+      "path": "2 areas/technology/zoxide.md",
+      "kind": "note",
+      "sha256": "f0bfe540c089e488492f3b8db9ce573ba539a24442fe2364ea9245aac0f55533"
+    },
+    {
+      "path": "2 areas/technology/zz setting up.md",
+      "kind": "note",
+      "sha256": "285f023d181feb2776c25ead537bf54f82f311074405c69cd22ba0b9fb67591f"
+    },
+    {
+      "path": "2 areas/technology/z MOC Infrastructure.md",
+      "kind": "note",
+      "sha256": "bf7de2b5a2a0699917cd52d20a5eaec89b78de2421bc80e9e60f61ddc82929bf"
+    },
+    {
+      "path": "2 areas/testing/Parametrize tests with error context or nullcontext.md",
+      "kind": "note",
+      "sha256": "684f36a9470f44214fa1100e7214fcf3e3a0691a43d015448b60738c94900ac0"
+    },
+    {
+      "path": "2 areas/testing/Test mocking properties.md",
+      "kind": "note",
+      "sha256": "9b372ae6d0ce9dac737815edf4624475ad8671a97ced05021c649387f9b05770"
+    },
+    {
+      "path": "2 areas/testing/Test that raised error contains the right message.md",
+      "kind": "note",
+      "sha256": "50791670f9311ca6d8db825a53c77f7c2a310488494b50de427af51faa1c1bd5"
+    },
+    {
+      "path": "3 resources/Post Mortem Template.md",
+      "kind": "note",
+      "sha256": "83a641b2cabc43e40f4ea9424d62575cb1a2fac007b2e66451d882c56b5d8f44"
+    },
+    {
+      "path": "3 resources/Weights and Biases Technical Demo - Unlock MLOps.md",
+      "kind": "note",
+      "sha256": "7ce20a5cdcd25b8f38954b4963d9ae967e2648360f1473097ee28cbaecd5325b"
+    },
+    {
+      "path": "4 archive/Alternative Bindemittelkonzepte (J. Rickert).md",
+      "kind": "note",
+      "sha256": "375898e1ae6a5e9dffa2c29a22ffc7a232229d3d2480bea5d56bce81db61ca94"
+    },
+    {
+      "path": "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md",
+      "kind": "note",
+      "sha256": "1565693cd3505326b454a9af15dbfcc57671b4a4a9c3f06d50b99dd4fe087dc0"
+    },
+    {
+      "path": "4 archive/Interview Practice Workshop.md",
+      "kind": "note",
+      "sha256": "a5efd0d620c2fae2eb66e0b04e6e8df46f9dbc4d88400359314caddb98336110"
+    },
+    {
+      "path": "4 archive/Kalzinierte Tone (Simone Schulze).md",
+      "kind": "note",
+      "sha256": "965d8830d44d52de4463da131656e85516168c6d1e8a22ae22f04e8d51f55b81"
+    },
+    {
+      "path": "4 archive/Klinkereffiziente Zemente (Christoph Müller).md",
+      "kind": "note",
+      "sha256": "25c7b44e3fb5b0aac85b3fd4269831548c39f69708d978e6cacd5f1ea938918e"
+    },
+    {
+      "path": "4 archive/Master class sketches and notes.md",
+      "kind": "note",
+      "sha256": "898760b9ee247eb2441e83d28f672d1056eb486f4a2d4b89b3d7204f0b347e47"
+    },
+    {
+      "path": "4 archive/Observability Course - Designing Effective Monitoring.md",
+      "kind": "note",
+      "sha256": "f30b495c3e7578aca09d0ddec89af99a80d46b54a7e21e22d59ce32bd295d1d1"
+    },
+    {
+      "path": "4 archive/Observability Course - Intro.md",
+      "kind": "note",
+      "sha256": "e79732c763eaca887d6e7ccff7250f186faa6abc3003c05ed5c8de6044d83568"
+    },
+    {
+      "path": "4 archive/Observability Course - Monitoring Metrics.md",
+      "kind": "note",
+      "sha256": "19494f9811415513696cfdb2a58c3f560b41519e69f99a344aefe6475282c5c4"
+    },
+    {
+      "path": "4 archive/PyData 2022 Day 1.md",
+      "kind": "note",
+      "sha256": "5a08a27a4e2328f6dadb06c61e783467363c776cd0aa8154a5ba4635b975d9ec"
+    },
+    {
+      "path": "4 archive/PyData 2022 Day 2.md",
+      "kind": "note",
+      "sha256": "72de528b25c8aca1eec95aa07250bbff06e080851b548081f5fcc1cabf4e0141"
+    },
+    {
+      "path": "4 archive/PyData 2022 Day 3.md",
+      "kind": "note",
+      "sha256": "4dece8da1bcdc6f14d808e9c078f4612583dc816e4eb1a0d9957ddcef89cb1e8"
+    },
+    {
+      "path": "4 archive/PyData 2023 Day 1.md",
+      "kind": "note",
+      "sha256": "b8d36aded9dbe8f8c9f18e4aaa593d0f922a293e379e36a5ef7858efb6023594"
+    },
+    {
+      "path": "4 archive/PyData 2023 Day 2.md",
+      "kind": "note",
+      "sha256": "2117b21ddccb898482a30d33f49e150c437c3e538fd91b5e9c04da63690139ec"
+    },
+    {
+      "path": "4 archive/PyData 2023 Day 3.md",
+      "kind": "note",
+      "sha256": "51994b3cbde29b7701d55e9929174ec17c90ce0fb3f8fe0952e650733bb1e532"
+    },
+    {
+      "path": "4 archive/Seminar Zemente der Zukunft.md",
+      "kind": "note",
+      "sha256": "96b6453a77f705adf539fd83f3d252f84bf079bf024ab12f5b798dc6526a5c74"
+    },
+    {
+      "path": "4 archive/Shape Up Planning Process.md",
+      "kind": "note",
+      "sha256": "685bf65d63b84ca769a76aa253d2197cc1948d9547f3dbb5ef3469c0bf8b6444"
+    },
+    {
+      "path": "4 archive/Snorkel DataCentric AI workshop.md",
+      "kind": "note",
+      "sha256": "71318faa456120ab9676078a9f9f58df245c0f2703fe1a69b8fd581065aa5667"
+    },
+    {
+      "path": "4 archive/Zulassung moderner Zemente (Sebastian Palm).md",
+      "kind": "note",
+      "sha256": "83849ec43b402851a1154763647f32a65acdaf85074cc47563665f1aa6af0629"
+    },
+    {
+      "path": "4 archive/cement/Cement.md",
+      "kind": "note",
+      "sha256": "c0e227a0a2aa4c20468dac76e168b87c5d88be4ad15705f355a664184819c6a7"
+    },
+    {
+      "path": "4 archive/cement/Steering parameters.md",
+      "kind": "note",
+      "sha256": "3313ff5d00d837a0ef16ea0f7961702e3c4faf969057e1dc72d3eaa5d5e34e1c"
+    },
+    {
+      "path": "4 archive/cement/Tipping Points.md",
+      "kind": "note",
+      "sha256": "e16257c1e0d3504efd66c12cfcfa96d8344dfdb63ff178a940f546b83d9d3323"
+    },
+    {
+      "path": "4 archive/cement/VDZ Seminar Getrennte Mahlung.md",
+      "kind": "note",
+      "sha256": "94a2d7dbf15b680c856988655832b6fd63bcf96d539eeb32c5ec91525d595ec4"
+    },
+    {
+      "path": "4 archive/cement/XRD Device Q&A.md",
+      "kind": "note",
+      "sha256": "64b810d2141c15468e36170dd8e522215776d5d97a8cd778a9d14e315b56f132"
+    },
+    {
+      "path": "4 archive/example company/Environment Bot.md",
+      "kind": "note",
+      "sha256": "ca7b0bb5469344f0ad306e0a8f83e021f077176da14aa4e9c6ca7ea6c95b8c33"
+    },
+    {
+      "path": "4 archive/example company/Internal Dashboard Access.md",
+      "kind": "note",
+      "sha256": "f3d3e27328732b72c8bddc847179391442bd1013a36c6fa0cc84c13b68605cdc"
+    },
+    {
+      "path": "4 archive/example company/Replaying an Import.md",
+      "kind": "note",
+      "sha256": "76d3c292176f9f78093d2ee9587b08156d8b4a680d3772bd3fa93df90b2e2590"
+    },
+    {
+      "path": "4 archive/example company/Restoring CI-CD after aborting a job prematurely.md",
+      "kind": "note",
+      "sha256": "5ad203762f8d87db986bab94b5755ee024b1e63ecf6d489f2becef9050dc5dbb"
+    },
+    {
+      "path": "4 archive/example company/Restoring dyn env after branch deletion.md",
+      "kind": "note",
+      "sha256": "b335f6bbbbea664f159353e82d07d06be8f56a2f1be161f37352e6532f4e44d9"
+    },
+    {
+      "path": "4 archive/example company/Updating a dyn env without repopulation.md",
+      "kind": "note",
+      "sha256": "76dd4578583e6e3546ef1d206d5c5244e4cd9a6c9101f8bee1b1e5fb05c5b1a5"
+    },
+    {
+      "path": "4 archive/example company/service-a/Debugging Nested Pipelines.md",
+      "kind": "note",
+      "sha256": "7be4eb03aecdc408f8737f9be5d0553bc3159dbbeabf270738635afc993cafc4"
+    },
+    {
+      "path": "4 archive/example company/service-a/Model Artifact Runtime Compatibility.md",
+      "kind": "note",
+      "sha256": "06d522386c09ff96364ec4c5282f0be8ce66d626af921fd3dc5f923dbd4e3d0e"
+    },
+    {
+      "path": "4 archive/example company/service-a/Model Compatibility and Release Versions.md",
+      "kind": "note",
+      "sha256": "dbd7bfa90c69112a925abc347dd9837b920260d50a095408e68a1a5b56828e33"
+    },
+    {
+      "path": "4 archive/example company/service-a/Running an Older Service Version During Retraining.md",
+      "kind": "note",
+      "sha256": "5c5ba357f386c13aed29386f394381ad01c79b0ac749c598601d51c7e1039891"
+    },
+    {
+      "path": "4 archive/example company/service-a/Service Testing.md",
+      "kind": "note",
+      "sha256": "5b3bf6a74e8c59bd5a929be445d6842557371c8d85d05b46eff84f0a4afd8431"
+    },
+    {
+      "path": "4 archive/z MOC Evidently Observability Course.md",
+      "kind": "note",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "4 archive/z MOC PyData 2022.md",
+      "kind": "note",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "4 archive/z MOC PyData 2023.md",
+      "kind": "note",
+      "sha256": "3443d2f4727879c8b0e4b24f765a4e43977746a7e7e0ddb397bd9be821479237"
+    },
+    {
+      "path": "Index.md",
+      "kind": "note",
+      "sha256": "f247b00ebe123505e395f7256483e27e3b546105fd1780b031eaa1b307aaa1b3"
+    }
+  ],
+  "unavailable_attachments": [
+    {
+      "target": "01_Klinkereffiziente Zemente - wichtiger Baustein der Dekarbonisierung.pdf",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "02_Tonhaltige Zemente_SiS_Handout.pdf",
+      "referenced_by": [
+        "4 archive/Kalzinierte Tone (Simone Schulze).md"
+      ]
+    },
+    {
+      "target": "04_Alternative Bindemittelkonzepte_Ri_handout.pdf",
+      "referenced_by": [
+        "4 archive/Alternative Bindemittelkonzepte (J. Rickert).md"
+      ]
+    },
+    {
+      "target": "05_Leistungsfähigkeiten neuer klinkereffizienter Zemente_Mueller.pdf",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "07_Zulassung von klinkereffizienten Zementen.pdf",
+      "referenced_by": [
+        "4 archive/Zulassung moderner Zemente (Sebastian Palm).md"
+      ]
+    },
+    {
+      "target": "Goal Setting 2023-11-15 16.09.57.excalidraw",
+      "referenced_by": [
+        "2 areas/soft skills/Goal Setting.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20221222142834.png",
+      "referenced_by": [
+        "2 areas/soft skills/z MOC Personal Knowledge Management.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230802151408.png",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230802151712.png",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230802151729.png",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230802151747.png",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230803112331.png",
+      "referenced_by": [
+        "2 areas/machine learning/Covariance - a measure of the joint variability of two variables.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20230828111838.png",
+      "referenced_by": [
+        "2 areas/engineering/Tech debt is a useful concept when making the choice to invest in a particular effort now vs. wait for the future.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20231018142029.png",
+      "referenced_by": [
+        "4 archive/Observability Course - Intro.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20231018142302.png",
+      "referenced_by": [
+        "4 archive/Observability Course - Intro.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423091500.png",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423092702.png",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423094302.png",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423095342.png",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423095425.png",
+      "referenced_by": [
+        "4 archive/Klinkereffiziente Zemente (Christoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423101235.png",
+      "referenced_by": [
+        "4 archive/Kalzinierte Tone (Simone Schulze).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423101851.png",
+      "referenced_by": [
+        "4 archive/Kalzinierte Tone (Simone Schulze).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423104647.png",
+      "referenced_by": [
+        "4 archive/Kalzinierte Tone (Simone Schulze).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423111753.png",
+      "referenced_by": [
+        "4 archive/Seminar Zemente der Zukunft.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423120121.png",
+      "referenced_by": [
+        "4 archive/Alternative Bindemittelkonzepte (J. Rickert).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423121229.png",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423121903.png",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423122115.png",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423122933.png",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423123251.png",
+      "referenced_by": [
+        "4 archive/Bewertung Klinkereffizienter Zemente im Beton (Cristoph Müller).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240423142055.png",
+      "referenced_by": [
+        "4 archive/Zulassung moderner Zemente (Sebastian Palm).md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240903164259.png",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240903164332.png",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240903164349.png",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240903164405.png",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20240903171904.png",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20241206110535.png",
+      "referenced_by": [
+        "2 areas/technology/obsidian.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20241219114407.png",
+      "referenced_by": [
+        "4 archive/Master class sketches and notes.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20251120104709.png",
+      "referenced_by": [
+        "2 areas/machine learning/ç.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20251120111219.png",
+      "referenced_by": [
+        "2 areas/machine learning/ç.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20260409113704.png",
+      "referenced_by": [
+        "2 areas/soft skills/Building Trust with People.md"
+      ]
+    },
+    {
+      "target": "Pasted image 20260916135138.png",
+      "referenced_by": [
+        "2 areas/ai engineering/Agentic Software Engineering Factory.md"
+      ]
+    },
+    {
+      "target": "Separate Grinding Seminar - Part 1.pdf",
+      "referenced_by": [
+        "4 archive/cement/VDZ Seminar Getrennte Mahlung.md"
+      ]
+    },
+    {
+      "target": "Separate Grinding Seminar - Part 2.pdf",
+      "referenced_by": [
+        "4 archive/cement/VDZ Seminar Getrennte Mahlung.md"
+      ]
+    },
+    {
+      "target": "The Pragmatic Engineer - A pragmatic guide to LLM evals for devs.pdf",
+      "referenced_by": [
+        "2 areas/ai engineering/evaluation/Pragmatic Engineer on LLM evals.md"
+      ]
+    },
+    {
+      "target": "dcf07e6a-7b8f-4329-a382-ceed151c4d15_750x751.jpg",
+      "referenced_by": [
+        "2 areas/soft skills/Knowledge work should accrete.md"
+      ]
+    },
+    {
+      "target": "ollama-vllm-sglang-infographic.png",
+      "referenced_by": [
+        "2 areas/ai engineering/Open Weights Model Frameworks.md"
+      ]
+    }
+  ],
+  "unresolved_note_links": [
+    {
+      "target": "\"a\", \"b\"",
+      "referenced_by": [
+        "2 areas/technology/pandas.md"
+      ]
+    },
+    {
+      "target": "Alternative Bindemittelkonzepte (J. Rickert)",
+      "referenced_by": [
+        "4 archive/Seminar Zemente der Zukunft.md"
+      ]
+    },
+    {
+      "target": "Andre Ferreira (Senior ML Engineer)",
+      "referenced_by": [
+        "2 areas/machine learning/Exploratory Data Analysis.md"
+      ]
+    },
+    {
+      "target": "Correlation - Pearson's r",
+      "referenced_by": [
+        "2 areas/machine learning/R² -Coefficient of Determination.md"
+      ]
+    },
+    {
+      "target": "Descriptive Statistics",
+      "referenced_by": [
+        "2 areas/machine learning/Covariance - a measure of the joint variability of two variables.md",
+        "2 areas/machine learning/R² -Coefficient of Determination.md",
+        "2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md",
+        "2 areas/machine learning/ç.md"
+      ]
+    },
+    {
+      "target": "European Cement Norm",
+      "referenced_by": [
+        "4 archive/cement/Cement.md"
+      ]
+    },
+    {
+      "target": "Example note",
+      "referenced_by": [
+        "4 archive/Master class sketches and notes.md"
+      ]
+    },
+    {
+      "target": "Exception Handling",
+      "referenced_by": [
+        "2 areas/engineering/Exception logging patterns.md"
+      ]
+    },
+    {
+      "target": "Features",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md",
+        "2 areas/machine learning/Polynomial Features.md"
+      ]
+    },
+    {
+      "target": "LLM Prompt Archive",
+      "referenced_by": [
+        "2 areas/ai engineering/LLM Best Practices.md"
+      ]
+    },
+    {
+      "target": "MOC Regular Notes",
+      "referenced_by": [
+        "Index.md"
+      ]
+    },
+    {
+      "target": "Markus Norden (Senior ML Engineer)",
+      "referenced_by": [
+        "2 areas/machine learning/Exploratory Data Analysis.md"
+      ]
+    },
+    {
+      "target": "Note title",
+      "referenced_by": [
+        "4 archive/Master class sketches and notes.md"
+      ]
+    },
+    {
+      "target": "PCA",
+      "referenced_by": [
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md"
+      ]
+    },
+    {
+      "target": "Pydantic",
+      "referenced_by": [
+        "2 areas/technology/Pydantic validation fails when saving to db from pydantic object.md"
+      ]
+    },
+    {
+      "target": "Rubric Based Scoring",
+      "referenced_by": [
+        "2 areas/ai engineering/evaluation/AI Evaluation System Roadmap.md"
+      ]
+    },
+    {
+      "target": "Sample",
+      "referenced_by": [
+        "4 archive/cement/Steering parameters.md"
+      ]
+    },
+    {
+      "target": "Sketches for Masterclass On Sketches and Notes",
+      "referenced_by": [
+        "4 archive/Master class sketches and notes.md"
+      ]
+    },
+    {
+      "target": "Software Engineering",
+      "referenced_by": [
+        "2 areas/engineering/Deploying should never be scary.md",
+        "2 areas/engineering/Friction is the difference between the model and the world.md",
+        "2 areas/engineering/Project names should be memorable, not descriptive.md",
+        "2 areas/engineering/Structure should follow developer mental model, not cleanness.md",
+        "2 areas/engineering/Tech debt is a useful concept when making the choice to invest in a particular effort now vs. wait for the future.md",
+        "2 areas/soft skills/Finding bugs.md",
+        "2 areas/soft skills/Giving MR Reviews.md",
+        "2 areas/soft skills/Mob programming.md",
+        "2 areas/soft skills/Quantify the wins of your work, as soon as you have done it.md",
+        "2 areas/soft skills/The goal of a good senior software engineer is to reduce entropy.md",
+        "2 areas/soft skills/To increase impact run towards the fire and prioritize ruthlessly.md",
+        "2 areas/technology/Professional grade mypy configuration.md",
+        "4 archive/Shape Up Planning Process.md"
+      ]
+    },
+    {
+      "target": "Tech debt is a useful concept when making the choice to invest in a particular effort now vs. wait for the future",
+      "referenced_by": [
+        "2 areas/engineering/Friction is the difference between the model and the world.md"
+      ]
+    },
+    {
+      "target": "XGBoost",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "Yasser Sheikh (Senior ML Engineer)",
+      "referenced_by": [
+        "2 areas/machine learning/Exploratory Data Analysis.md"
+      ]
+    },
+    {
+      "target": "career",
+      "referenced_by": [
+        "2 areas/soft skills/Building Trust with People.md",
+        "2 areas/soft skills/Giving Performance Reviews.md",
+        "2 areas/soft skills/Goal Setting.md",
+        "2 areas/soft skills/Lateral Leadership.md",
+        "2 areas/soft skills/Mentoring.md",
+        "2 areas/soft skills/Performance Self Review.md",
+        "2 areas/soft skills/Quantify the wins of your work, as soon as you have done it.md",
+        "2 areas/soft skills/Staff Engineer Archetypes.md",
+        "2 areas/soft skills/Story Telling for State Change.md",
+        "2 areas/soft skills/The goal of a good senior software engineer is to reduce entropy.md",
+        "2 areas/soft skills/To increase impact run towards the fire and prioritize ruthlessly.md",
+        "2 areas/soft skills/Work Log.md"
+      ]
+    },
+    {
+      "target": "column_name",
+      "referenced_by": [
+        "2 areas/technology/pandas.md"
+      ]
+    },
+    {
+      "target": "confidence intervals",
+      "referenced_by": [
+        "2 areas/machine learning/Regression Loss.md"
+      ]
+    },
+    {
+      "target": "database",
+      "referenced_by": [
+        "2 areas/technology/Migrations using alembic.md",
+        "2 areas/technology/SQL.md"
+      ]
+    },
+    {
+      "target": "default_vault/0 inbox/z> MOC ML",
+      "referenced_by": [
+        "2 areas/ai engineering/evaluation/RAG.md",
+        "2 areas/ai engineering/evaluation/z> MOC AI Evaluation.md",
+        "2 areas/machine learning/Bias Variance Tradeoff.md",
+        "2 areas/machine learning/Data Distribution Shifts.md",
+        "2 areas/machine learning/Degenerate Feedback Loops.md",
+        "2 areas/machine learning/ElasticNet.md",
+        "2 areas/machine learning/Exploratory Data Analysis.md",
+        "2 areas/machine learning/Extra Trees Classifier.md",
+        "2 areas/machine learning/Feature order matters for tree based transformers.md",
+        "2 areas/machine learning/High performance features should be disregarded when they lead to drifts.md",
+        "2 areas/machine learning/Hyper Parameter Optimization.md",
+        "2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md",
+        "2 areas/machine learning/Monitoring and Observability.md",
+        "2 areas/machine learning/Polynomial Features.md",
+        "2 areas/machine learning/Regression Loss.md",
+        "2 areas/technology/lineaPy.md",
+        "Index.md"
+      ]
+    },
+    {
+      "target": "grafana",
+      "referenced_by": [
+        "2 areas/technology/Grafana time series plots require data to be grouped over time.md"
+      ]
+    },
+    {
+      "target": "image.png\\",
+      "referenced_by": [
+        "2 areas/technology/obsidian.md"
+      ]
+    },
+    {
+      "target": "managing",
+      "referenced_by": [
+        "2 areas/soft skills/What's the Point of Managers.md"
+      ]
+    },
+    {
+      "target": "name",
+      "referenced_by": [
+        "2 areas/soft skills/z MOC Personal Knowledge Management.md"
+      ]
+    },
+    {
+      "target": "note",
+      "referenced_by": [
+        "2 areas/technology/obsidian.md"
+      ]
+    },
+    {
+      "target": "page name\\",
+      "referenced_by": [
+        "2 areas/technology/obsidian.md"
+      ]
+    },
+    {
+      "target": "python",
+      "referenced_by": [
+        "2 areas/engineering/Exception logging patterns.md",
+        "2 areas/machine learning/LangChain.md",
+        "2 areas/machine learning/Unpickling sklearn models does not execute their initialization method.md",
+        "2 areas/technology/Migrations using alembic.md",
+        "2 areas/technology/Pandas query() method for more readable data selection.md",
+        "2 areas/technology/lineaPy.md",
+        "2 areas/technology/numpy.md",
+        "2 areas/technology/pandas.md",
+        "2 areas/technology/pytest.md",
+        "2 areas/technology/python 3.10.md",
+        "2 areas/technology/python 3.11.md",
+        "2 areas/technology/scikit-learn.md",
+        "2 areas/testing/Parametrize tests with error context or nullcontext.md",
+        "2 areas/testing/Test mocking properties.md",
+        "2 areas/testing/Test that raised error contains the right message.md"
+      ]
+    },
+    {
+      "target": "self organization",
+      "referenced_by": [
+        "2 areas/soft skills/Knowledge work should accrete.md",
+        "2 areas/soft skills/Note taking is thinking.md",
+        "2 areas/soft skills/Performance Self Review.md",
+        "2 areas/soft skills/Work Log.md",
+        "2 areas/soft skills/z MOC Personal Knowledge Management.md"
+      ]
+    },
+    {
+      "target": "standard deviation",
+      "referenced_by": [
+        "2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md"
+      ]
+    },
+    {
+      "target": "unittest",
+      "referenced_by": [
+        "2 areas/testing/Test mocking properties.md"
+      ]
+    },
+    {
+      "target": "workshop",
+      "referenced_by": [
+        "2 areas/soft skills/Feedback Workshop.md",
+        "2 areas/soft skills/Interview Workshop A.md",
+        "2 areas/soft skills/Interview Workshop B.md"
+      ]
+    },
+    {
+      "target": "z> MOC Evidently Observability Course",
+      "referenced_by": [
+        "4 archive/Observability Course - Designing Effective Monitoring.md",
+        "4 archive/Observability Course - Intro.md",
+        "4 archive/Observability Course - Monitoring Metrics.md"
+      ]
+    },
+    {
+      "target": "z> MOC Hiring",
+      "referenced_by": [
+        "2 areas/soft skills/CAR Method.md",
+        "2 areas/soft skills/Interview Workshop A.md",
+        "2 areas/soft skills/Interview Workshop B.md",
+        "Index.md"
+      ]
+    },
+    {
+      "target": "z> MOC Infrastructure",
+      "referenced_by": [
+        "2 areas/technology/Hera.md",
+        "2 areas/technology/OpenLens.md",
+        "2 areas/technology/bottom.md",
+        "2 areas/technology/dynamic environment.md",
+        "2 areas/technology/eza.md",
+        "2 areas/technology/fuck.md",
+        "2 areas/technology/hoard.md",
+        "2 areas/technology/kdash.md",
+        "2 areas/technology/kubernetes.md",
+        "2 areas/technology/obsidian.md",
+        "2 areas/technology/pipenv.md",
+        "2 areas/technology/pyenv.md",
+        "2 areas/technology/pyvenv_activate.md",
+        "2 areas/technology/starship.md",
+        "2 areas/technology/terraform.md",
+        "2 areas/technology/uv.md",
+        "2 areas/technology/zoxide.md",
+        "3 resources/Weights and Biases Technical Demo - Unlock MLOps.md",
+        "4 archive/example company/Environment Bot.md",
+        "4 archive/example company/Internal Dashboard Access.md",
+        "4 archive/example company/Replaying an Import.md",
+        "Index.md"
+      ]
+    },
+    {
+      "target": "z> MOC Personal Knowledge Management",
+      "referenced_by": [
+        "2 areas/soft skills/Knowledge work should accrete.md",
+        "2 areas/soft skills/Note taking is thinking.md",
+        "Index.md"
+      ]
+    },
+    {
+      "target": "z> MOC PyData 2022",
+      "referenced_by": [
+        "4 archive/PyData 2022 Day 1.md",
+        "4 archive/PyData 2022 Day 2.md",
+        "4 archive/PyData 2022 Day 3.md"
+      ]
+    },
+    {
+      "target": "z> MOC PyData 2023",
+      "referenced_by": [
+        "4 archive/PyData 2023 Day 1.md",
+        "4 archive/PyData 2023 Day 2.md",
+        "4 archive/PyData 2023 Day 3.md"
+      ]
+    },
+    {
+      "target": "zz> setting up",
+      "referenced_by": [
+        "2 areas/technology/z MOC Infrastructure.md"
+      ]
+    },
+    {
+      "target": "z〉 MOC Quarterly Feedback",
+      "referenced_by": [
+        "Index.md"
+      ]
+    },
+    {
+      "target": "z〉Expenses und Bildungszeit",
+      "referenced_by": [
+        "Index.md"
+      ]
+    },
+    {
+      "target": "z〉Learning topics",
+      "referenced_by": [
+        "Index.md"
+      ]
+    }
+  ]
+}

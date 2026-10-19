@@ -31,7 +31,7 @@ from src.harness import (
 )
 from src.utils import SystemPrompt
 
-DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/test_vault"
+DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/extended_test_vault"
 
 
 def _now() -> str:

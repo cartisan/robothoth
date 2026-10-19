@@ -147,7 +147,7 @@ def test_invalid_or_contradictory_requirements_rejected(
 
 
 def test_migrated_dataset_expectations() -> None:
-    search, multi, synthesis = load_dataset()
+    search, multi, synthesis = load_dataset(version=1)
     assert search.tool_checks.required_tools == ["list_notes"]
     assert search.tool_checks.allowed_tools == ["list_notes"]
     assert search.ground_truth.ideal_answer and not search.ground_truth.answer_criteria

@@ -3,7 +3,8 @@
 The runner evaluates the entire validated gold dataset sequentially in file
 order, with independent conversations and grades for each repeat. Empty or
 invalid datasets are rejected before any model calls. Defaults are the bundled
-dataset and vault, the existing harness prompt, one repeat, and 20 model
+dataset and extended knowledge vault (`tests/extended_test_vault`), the existing
+harness prompt, one repeat, and 20 model
 invocations per conversation.
 
 In Python:
@@ -19,7 +20,7 @@ run = run_evaluation(
         model="gpt-6-luna", reasoning_effort="medium", use_responses_api=True,
     ),
     system_prompt=SYSTEM_PROMPT,
-    vault_path="tests/test_vault",
+    vault_path="tests/extended_test_vault",
     judge=SemanticJudge(),
     repeats=2,
     tool_binding_kwargs={"strict": True},
@@ -31,7 +32,7 @@ print(run.report["summary"])
 
 `SemanticJudge(model, prompt, structured_output_kwargs)` can also grade saved
 answers independently via `grade(request, final_answer, ground_truth)`, with
-`GroundTruth` from `src.golden_dataset.validate`. Both the harness and judge accept the shared
+`GroundTruth` from `src.gold_dataset.validate`. Both the harness and judge accept the shared
 immutable `SystemPrompt` model from `src.utils`, for example
 `SystemPrompt(version=2, text="Custom system instructions")`. It requires a
 strict positive integer version and nonblank text, rejects extra fields, and
@@ -97,7 +98,7 @@ input boundary; their full text and integer version are recorded for later revie
 
 ```sh
 uv run --locked python -m src.evaluation.run --config evaluation.json \
-  --dataset-path src/golden_dataset/dataset.json --vault-path tests/test_vault \
+  --dataset-path src/gold_dataset/dataset.json --vault-path tests/extended_test_vault \
   --repeats 3 --max-api-calls 20 \
   --output-directory evaluation_runs
 ```
