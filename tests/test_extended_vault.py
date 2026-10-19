@@ -108,14 +108,14 @@ def test_small_fixture_is_preserved_in_the_redacted_snapshot() -> None:
         ) is None, relative
 
 
-def test_new_cases_have_ground_truth_readable_evidence_and_tool_coverage() -> None:
-    """Require usable expectations, real evidence, and coverage of every tool."""
+def test_new_cases_have_answer_criteria_readable_evidence_and_tool_coverage() -> None:
+    """Require usable criteria, real evidence, and coverage of every tool."""
     entries = [entry for entry in load_dataset() if entry.dataset_version == 2]
     registered = {tool["name"] for tool in registry.tool_definitions()}
     covered: set[str] = set()
     hard_cases = []
     for entry in entries:
-        assert entry.ground_truth.ideal_answer
+        assert entry.answer_criteria.ideal_answer
         checks = entry.tool_checks
         demanded = set(checks.required_tools)
         if checks.required_note_reads:

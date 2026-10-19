@@ -32,7 +32,7 @@ def render_repeat(result: dict[str, Any]) -> str:
     return summary_markdown(report=report)
 
 
-def test_summary_explains_every_check_and_judge_expectation() -> None:
+def test_summary_explains_every_check_and_judge_criterion() -> None:
     explanation = (
         "The answer covers the main idea | but omits escalation.\n"
         "A different phrasing would be fine. <Missing essential content>"
@@ -48,7 +48,7 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
             "total_tokens": 150,
             "tool_checks": [
                 {
-                    "expectation_id": "required_tools[0]",
+                    "criterion_id": "required_tools[0]",
                     "passed": True,
                     "explanation": "Found successful list_notes call.",
                     "calls": [
@@ -65,7 +65,7 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
                     ],
                 },
                 {
-                    "expectation_id": "required_note_reads[0]",
+                    "criterion_id": "required_note_reads[0]",
                     "passed": False,
                     "explanation": "Missing successful read of area/Note.md.",
                     "calls": [],
@@ -73,17 +73,17 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
             ],
             "scores": [
                 {
-                    "expectation_id": "ideal_answer",
+                    "criterion_id": "ideal_answer",
                     "score": 3,
                     "explanation": explanation,
                 },
                 {
-                    "expectation_id": "quality.concision",
+                    "criterion_id": "quality.concision",
                     "score": 4,
                     "explanation": "The answer is concise.",
                 },
                 {
-                    "expectation_id": "quality.task_usefulness",
+                    "criterion_id": "quality.task_usefulness",
                     "score": 5,
                     "explanation": "Directly usable.",
                 },
@@ -125,7 +125,7 @@ def test_summary_explains_every_check_and_judge_expectation() -> None:
         (
             "judge_error",
             "JudgeError",
-            "Duplicate expectation IDs",
+            "Duplicate criterion IDs",
             None,
             "No valid judge ratings available.",
         ),
@@ -152,7 +152,7 @@ def test_summary_distinguishes_errors_from_scored_failures(
     assert unavailable in summary
     assert f"Error: {error_type}: {message}" in summary
     assert "Pass rate: 0 / 0 (null)" in summary
-    assert "| Expectation |" not in summary
+    assert "| Criterion |" not in summary
     if cause:
         assert "Caused by: ConnectionError: Provider unavailable" in summary
 

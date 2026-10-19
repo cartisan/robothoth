@@ -1,18 +1,28 @@
 # Gold dataset
 
 `dataset.json` is the manually maintained source of evaluation cases. Its
-`schema_version` is `1`; this is metadata and does not select validation rules.
+`schema_version` is `2`; this is metadata and does not select validation rules.
 Unknown fields and type coercion are rejected.
 
 Each entry requires a unique nonblank `id`, `request`, `added_reason`, positive
-integer `dataset_version`, `ground_truth`, and `tool_checks`. Ground truth needs
-an `ideal_answer`, nonempty `answer_criteria`, or both. Supplied answers and
-criteria must be nonblank; when both are present, all expectations apply.
+integer `dataset_version`, `answer_criteria`, and `tool_checks`. The
+`answer_criteria` object requires an `ideal_answer`, nonempty
+`additional_criteria`, or both. Supplied answers and criteria must be nonblank;
+when both are present, all criteria apply.
+
+```json
+{
+  "answer_criteria": {
+    "ideal_answer": "The reference answer.",
+    "additional_criteria": ["Preserves the source caveat."]
+  }
+}
+```
 
 Use ideal answers for correctness and essential coverage. Keep case-specific
 criteria focused on critical exclusions and source caveats. Shared concision and
 task-usefulness rubrics belong in the [judge](../evaluation/README.md#scoring).
-Base expectations on the vault snapshot and its caveats, independently of candidate
+Base criteria on the vault snapshot and its caveats, independently of candidate
 performance.
 
 ## Tool checks
@@ -39,7 +49,7 @@ requirements, but count toward prohibitions and allowlists.
 Append entries to `dataset.json` and set their introduction `dataset_version`.
 Name IDs after the tested behavior, preferably three lowercase hyphen-delimited
 parts such as `multi-source-integration`. Use `added_reason` to explain evaluation
-coverage or failure modes, keeping answer expectations in `ground_truth`.
+coverage or failure modes, keeping answer criteria in `answer_criteria`.
 
 ```sh
 uv run --locked python -m src.gold_dataset.validate
@@ -50,7 +60,7 @@ Import models and loaders from `src.gold_dataset.validate`.
 `load_dataset(path=None, version=None)` validates the entire file, then returns
 entries in file order. Version `N` includes entries introduced at or before `N`;
 `None` includes all and `0` includes none. Git retains historical edits to
-expectations. The runner always evaluates all cases and reports the highest
+criteria. The runner always evaluates all cases and reports the highest
 entry version as `gold_dataset_version`.
 
 ## Bundled coverage

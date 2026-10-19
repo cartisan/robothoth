@@ -18,7 +18,7 @@ from src.evaluation.judge import (
     CONCISION_PROMPT,
     CONTENT_PROMPT,
     TASK_USEFULNESS_PROMPT,
-    ExpectationScore,
+    CriterionScore,
     JudgeCall,
     SemanticGrade,
     SemanticJudge,
@@ -44,7 +44,7 @@ def judge_with(*responses: Any) -> SemanticJudge:
                     raw=raw,
                     scores=[
                         {
-                            "expectation_id": key,
+                            "criterion_id": key,
                             "score": response if key == "ideal_answer" else 5,
                             "explanation": "Meaning checked"
                             if key == "ideal_answer"
@@ -106,7 +106,7 @@ def test_all_cases_repeats_thresholds_and_version_metadata(
         "status" not in case and "verdict" not in case
         for case in report["case_summaries"]
     )
-    assert report["report_version"] == 3
+    assert report["report_version"] == 4
     assert report["candidate_system_prompt"] == {
         "version": 2,
         "text": "Candidate prompt",
@@ -519,18 +519,19 @@ def test_every_semantic_score_and_tool_requirement_must_pass(tmp_path: Path) -> 
         path,
         [
             entry(
-                ground_truth={"ideal_answer": "A", "answer_criteria": ["Concise"]},
+                answer_criteria={
+                    "ideal_answer": "A",
+                    "additional_criteria": ["Concise"],
+                },
             )
         ],
     )
     judge = judge_with(4)
     grade = SemanticGrade(
         (
-            ExpectationScore(
-                expectation_id="ideal_answer", score=5, explanation="Agrees"
-            ),
-            ExpectationScore(
-                expectation_id="answer_criteria[0]", score=3, explanation="Long"
+            CriterionScore(criterion_id="ideal_answer", score=5, explanation="Agrees"),
+            CriterionScore(
+                criterion_id="additional_criteria[0]", score=3, explanation="Long"
             ),
         ),
         (JudgeCall(stage="content", raw_response=AIMessage(content="raw")),),
@@ -670,7 +671,7 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
             ),
             scores=[
                 {
-                    "expectation_id": key,
+                    "criterion_id": key,
                     "score": score,
                     "explanation": "Meaning checked",
                 }
@@ -741,7 +742,7 @@ def test_quality_threshold_controls_repeat_status_and_exit_code(
             raw=AIMessage(content=key),
             scores=[
                 {
-                    "expectation_id": key,
+                    "criterion_id": key,
                     "score": value if key == quality_id else 5,
                     "explanation": "Independently assessed",
                 }

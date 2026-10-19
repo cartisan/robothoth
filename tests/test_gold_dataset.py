@@ -9,10 +9,10 @@ import pytest
 from pydantic import ValidationError
 
 from src.gold_dataset.validate import (
+    AnswerCriteria,
     DatasetValidationError,
     GoldDataset,
     GoldEntry,
-    GroundTruth,
     load_dataset,
     load_dataset_document,
 )
@@ -24,7 +24,7 @@ def entry(**changes: object) -> dict[str, object]:
         "request": "Find the Golden Evaluation Dataset note",
         "added_reason": "Check note discovery",
         "dataset_version": 1,
-        "ground_truth": {"ideal_answer": "The note is in evaluation."},
+        "answer_criteria": {"ideal_answer": "The note is in evaluation."},
         "tool_checks": {},
     }
     result.update(changes)
@@ -43,54 +43,58 @@ def write_dataset(
 
 
 @pytest.mark.parametrize(
-    "ground_truth",
+    "answer_criteria",
     [
         {"ideal_answer": "An answer"},
-        {"answer_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "answer_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "answer_criteria": []},
-        {"ideal_answer": None, "answer_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "answer_criteria": None},
+        {"additional_criteria": ["Names the note"]},
+        {"ideal_answer": "An answer", "additional_criteria": ["Names the note"]},
+        {"ideal_answer": "An answer", "additional_criteria": []},
+        {"ideal_answer": None, "additional_criteria": ["Names the note"]},
+        {"ideal_answer": "An answer", "additional_criteria": None},
     ],
 )
-def test_ground_truth_accepts_usable_combinations(
-    ground_truth: dict[str, object],
+def test_answer_criteria_accepts_usable_combinations(
+    answer_criteria: dict[str, object],
 ) -> None:
-    assert GoldEntry.model_validate(entry(ground_truth=ground_truth)).ground_truth
+    assert GoldEntry.model_validate(
+        obj=entry(answer_criteria=answer_criteria)
+    ).answer_criteria
 
 
 @pytest.mark.parametrize(
-    "ground_truth",
+    "answer_criteria",
     [
         {},
         {"ideal_answer": None},
-        {"answer_criteria": []},
-        {"ideal_answer": None, "answer_criteria": None},
+        {"additional_criteria": []},
+        {"ideal_answer": None, "additional_criteria": None},
     ],
 )
-def test_ground_truth_requires_an_expectation(ground_truth: dict[str, object]) -> None:
+def test_answer_criteria_requires_a_criterion(
+    answer_criteria: dict[str, object],
+) -> None:
     with pytest.raises(ValidationError):
-        GroundTruth.model_validate(ground_truth)
+        AnswerCriteria.model_validate(obj=answer_criteria)
 
 
 @pytest.mark.parametrize(
-    "ground_truth",
+    "answer_criteria",
     [
         {"ideal_answer": "  "},
-        {"answer_criteria": ["  "]},
-        {"ideal_answer": "Valid", "answer_criteria": ["  "]},
-        {"ideal_answer": "Valid", "answer_criteria": [], "extra": "no"},
+        {"additional_criteria": ["  "]},
+        {"ideal_answer": "Valid", "additional_criteria": ["  "]},
+        {"ideal_answer": "Valid", "additional_criteria": [], "extra": "no"},
         {"ideal_answer": 2},
-        {"answer_criteria": "criterion"},
-        {"answer_criteria": ("criterion",)},
-        {"answer_criteria": [1]},
+        {"additional_criteria": "criterion"},
+        {"additional_criteria": ("criterion",)},
+        {"additional_criteria": [1]},
     ],
 )
-def test_ground_truth_rejects_invalid_supplied_fields(
-    ground_truth: dict[str, object],
+def test_answer_criteria_rejects_invalid_supplied_fields(
+    answer_criteria: dict[str, object],
 ) -> None:
     with pytest.raises(ValidationError):
-        GroundTruth.model_validate(ground_truth)
+        AnswerCriteria.model_validate(obj=answer_criteria)
 
 
 @pytest.mark.parametrize(
@@ -107,7 +111,7 @@ def test_ground_truth_rejects_invalid_supplied_fields(
         {"dataset_version": True},
         {"dataset_version": 1.0},
         {"extra": "no"},
-        {"ground_truth": "answer"},
+        {"answer_criteria": "answer"},
     ],
 )
 def test_entry_rejects_blank_wrong_type_and_extra_fields(
@@ -119,7 +123,14 @@ def test_entry_rejects_blank_wrong_type_and_extra_fields(
 
 @pytest.mark.parametrize(
     "missing",
-    ["id", "request", "added_reason", "dataset_version", "ground_truth", "tool_checks"],
+    [
+        "id",
+        "request",
+        "added_reason",
+        "dataset_version",
+        "answer_criteria",
+        "tool_checks",
+    ],
 )
 def test_entry_requires_all_fields(missing: str) -> None:
     value = entry()

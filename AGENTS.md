@@ -34,7 +34,7 @@ boundaries, and operational failures. Copy mutable data only when mutation or
 snapshot ownership requires it.
 
 Keep class-specific construction and validation helpers as private methods on the
-owning class. Use descriptive names such as `_construct_content_grading_stage`
+owning class. Use descriptive names such as `_construct_content_grading_payload`
 and `_validate_scores`.
 
 Extract cohesive validation blocks into documented methods. Describe accepted
@@ -73,5 +73,6 @@ lowercase parts delimited by hyphens, such as `multi-source-integration`.
 Write each `added_reason` as an evaluation rationale: why the case belongs in
 the dataset and which assistant capability, behavior, or failure mode it tests.
 Describe the intended coverage rather than summarizing the source notes or
-repeating facts from the expected answer. Put answer expectations in
-`ground_truth` and deterministic tool requirements in `tool_checks`.
+repeating facts from the expected answer. Put answer criteria in
+`answer_criteria.ideal_answer` and `answer_criteria.additional_criteria`, and
+deterministic tool requirements in `tool_checks`.

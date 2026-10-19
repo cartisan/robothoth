@@ -1,12 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "entries": [
     {
       "id": "search-tool-usage",
       "request": "Where is the Golden Evaluation Dataset note in this vault?",
       "added_reason": "Check that notes can be found, and that the list_note tool is used for this",
       "dataset_version": 1,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "The note is at 2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md."
       },
       "tool_checks": {
@@ -24,9 +24,9 @@
       "request": "According to the Golden Evaluation Dataset note, summarize in a few sentences what makes a good evaluation dataset.",
       "added_reason": "Check that that note content is reproduced correctly and summarization is concise",
       "dataset_version": 1,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "According to [[Golden Evaluation Dataset]], a good evaluation dataset reflects real user inputs, including edge cases, adversarial examples, long-tail cases, and domain-specific terminology. Each case should have expert-agreed ground truth—either an ideal answer or clear acceptance criteria—and follow a consistent schema that explicitly identifies the failure mode it is meant to catch. The dataset should evolve as new failures emerge, with versioning and a changelog explaining additions. Above all, good data matters more than sophisticated metrics: it defines which problems your evaluation can detect.",
-        "answer_criteria": [
+        "additional_criteria": [
           "The answer is concise, it contains only a 3-4 sentences."
         ]
       },
@@ -43,7 +43,7 @@
       "request": "How would you build and calibrate a rubric-based LLM judge for customer-support chatbot answers, and keep its scores from being skewed by common judge biases?",
       "added_reason": "Check that multiple note content is integrated by the system.",
       "dataset_version": 1,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Define several specific, measurable, nonoverlapping criteria for the chatbot's answers, such as politeness, policy adherence, and correct escalation. Have an LLM judge score each criterion on a Likert scale with anchor examples for the scale's extremes. Calibrate its grades against domain experts using real outcomes, examples, a test set, and a held-out validation set; refine the rubric or judge prompt when they disagree. Reduce position bias by swapping answer order in pairwise comparisons, verbosity bias with a concision criterion, and self-preference bias by using an independent judge family or comparing answers from the same family."
       },
       "tool_checks": {
@@ -58,9 +58,9 @@
       "request": "Search my testing notes for a way to cover valid and invalid inputs in one parameterized pytest test without branching in the test body. Explain how to combine the success and failure cases, and how to ensure an invalid input fails for the expected reason rather than an unrelated error of the same type.",
       "added_reason": "Added to test whether the assistant can find complementary guidance in two notes and combine it into one actionable answer, rather than summarize each source independently.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Use pytest.mark.parametrize with pairs of an input and its expected context. For valid inputs, supply contextlib.nullcontext() (the note aliases it as DoesNotRaise); for invalid inputs, supply pytest.raises with the expected exception class and match set to the expected message pattern. Put the same operation inside with error_context: in the test body. The success context lets the operation run normally, so an unexpected exception still fails; the raises context requires the expected failure. Checking the message as well as the exception type prevents a different failure of the same type from making the test pass. The decorator is pytest.mark.parametrize.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Describe a single parameterized test with input/context pairs and a shared with-context operation, rather than branching between separate success and failure bodies.",
           "Use contextlib.nullcontext (or its DoesNotRaise alias) for successful inputs, allowing unexpected exceptions to fail the test.",
           "For failing inputs, require both the expected exception type and a message pattern through pytest.raises match; explain why matching only the type can accept an unrelated error.",
@@ -83,9 +83,9 @@
       "request": "Search the content of my notes for why a tree-based transformer can change its fitted result after features are merely renamed or reordered, even with a fixed random seed. Identify the note, explain the condition it gives, and say how it recommends preventing accidental changes.",
       "added_reason": "Added to cover discovery when the user describes a problem without naming the note.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "The reference is [[Feature order matters for tree based transformers]] at 2 areas/machine learning/Feature order matters for tree based transformers.md. When max_features is less than n_features, random feature sampling at each split depends on feature order: fixing the random seed fixes the sampled positions, but reordering features can change which features occupy those positions. The note exempts the case max_features == n_features from this particular sampling explanation. It recommends having the transformer maintain a stable feature order itself, decoupled from preprocessing.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Identify the Feature order matters for tree based transformers note.",
           "Explain that fixed-seed random feature selection can select different features after reordering when max_features < n_features; preserve the note’s max_features == n_features exception to this explanation.",
           "Recommend stable ordering owned by the transformer, avoiding accidental dependence on preceding preprocessing such as unordered feature sets."
@@ -106,9 +106,9 @@
       "request": "According to my Regression Loss note, which loss should I consider if I want robustness to large residuals and a twice-differentiable objective for an optimizer that uses the Hessian? Explain its small- and large-error behavior and compare it with Huber loss.",
       "added_reason": "Added to test whether the assistant can apply retrieved knowledge to select a recommendation satisfying several user constraints and justify the choice against a plausible alternative.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Consider log-cosh loss, the logarithm of the hyperbolic cosine of the prediction error. For a small residual e it behaves approximately like e²/2, while for a large residual it approaches |e| − log(2), reducing the influence of outliers compared with squared error. Huber similarly uses a quadratic region for small errors and an absolute-error region for large errors, separated by its delta threshold. The distinguishing advantage in the note is that log-cosh is twice differentiable everywhere, unlike Huber, which helps algorithms that require the Hessian.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Select log-cosh and explain why being twice differentiable everywhere addresses the Hessian requirement.",
           "Describe approximately quadratic behavior for small errors and approximately absolute/linear behavior for large errors, giving robustness relative to squared error.",
           "Explain Huber’s delta-controlled quadratic and absolute-error regions and distinguish its lack of twice-differentiability everywhere from log-cosh."
@@ -129,9 +129,9 @@
       "request": "Using only the outgoing-link tool, list the existing Markdown course notes directly linked from 2 areas/machine learning/Monitoring and Observability.md. Give their full vault-relative paths; do not add inferred or nonexistent destinations.",
       "added_reason": "Added to cover get_outgoing_links usage and test whether the assistant returns the complete set of existing destinations across directories without inventing destinations from unresolved links.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "The linked course notes are:\n- 4 archive/Observability Course - Designing Effective Monitoring.md\n- 4 archive/Observability Course - Intro.md\n- 4 archive/Observability Course - Monitoring Metrics.md",
-        "answer_criteria": [
+        "additional_criteria": [
           "Do not include any additional destination, such as the unresolved default_vault/0 inbox/z> MOC ML association."
         ]
       },
@@ -150,9 +150,9 @@
       "request": "Using only the backlinks tool, which existing notes link directly to 2 areas/machine learning/Covariance - a measure of the joint variability of two variables.md? Return all source notes as full vault-relative paths, preserving their actual filenames even if a name looks unusual.",
       "added_reason": "Added to cover get_backlinks usage and test complete incoming-link discovery, including heading references and unusual Unicode filenames, without substituting guessed note titles.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "The incoming notes are:\n- 2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md\n- 2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md\n- 2 areas/machine learning/ç.md",
-        "answer_criteria": [
+        "additional_criteria": [
           "Preserve the correlation note’s actual ç.md filename rather than inventing a descriptive Correlation or Pearson filename; equivalent visual Unicode rendering is acceptable."
         ]
       },
@@ -171,9 +171,9 @@
       "request": "Using only the overview content in my Extra Trees Classifier and Random Forrests notes, which method has better cement-forecast accuracy, and by how much? Explain what these two notes actually establish.",
       "added_reason": "Added to test whether the assistant recognizes that the requested comparison is unsupported, explains the limits of the retrieved evidence, and abstains instead of supplying an answer from assumptions or general knowledge.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "These two overview notes do not establish a winner or an accuracy difference for cement forecasting. Extra Trees Classifier has only a TBD idea section and associations, with no substantive comparison or results. Random Forrests explains ensembles of decision trees, regression and classification, robustness, nonlinear relationships, feature importance, and the inability to extrapolate beyond the trees’ prediction ranges. Those general properties are not a cement benchmark, so I cannot derive a numerical advantage or recommend one as more accurate from these notes.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Do not invent percentages, scores, comparative results, or a supported accuracy recommendation."
         ]
       },
@@ -193,9 +193,9 @@
       "request": "Start from Monitoring and Observability and follow its linked course notes; also search for my explanation of data distribution shifts. We predict a quality measure whose true label arrives weeks later. Feature distributions look stable, but later labels reveal worse predictions for one product segment. Design a practical monitoring and investigation plan: what should we check before labels arrive, what should we log and evaluate later, why does stable input not settle the drift question, and should a drift alarm automatically trigger retraining?",
       "added_reason": "Hard: Added to test whether the assistant can navigate across linked notes in different directories, reconcile recommendations that apply in different contexts, and synthesize a complete plan addressing every part of a scenario.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Stable P(X) does not rule out concept drift: the relationship P(Y|X) can change even if input distributions remain stable. Once labels arrive, measure actual prediction quality by product segment and over suitable time windows; an aggregate score can hide the failing segment. Before labels arrive, monitor data integrity, missingness, schema/range changes, prediction distributions, and service health as early indicators, while recognizing that drift proxies do not prove accuracy degradation. The general note prioritizes user-visible output symptoms; when investigating an alarm, the metrics course recommends checking data quality first so a pipeline/source problem is not mistaken for real drift. Log model inputs, predictions, and eventual ground truth in a prediction store. A monitoring service or periodic job can compute metrics for a metric store and dashboards; retain per-feature distributions, segment statistics, and enough context to debug changes. Select alerting metrics separately from drill-down data and choose windows with seasonality in mind. Treat drift as an investigation trigger, not an unconditional retraining trigger: inspect changed features and segments, verify data quality and representativeness, and validate a retrained or fixed model before rollout. Closely monitoring without immediate intervention can also be appropriate if the model remains adequate.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Explain that stable input distribution P(X) cannot exclude concept drift in P(Y|X), and require eventual labeled performance evaluation rather than equating drift proxies with accuracy.",
           "Propose early checks of data quality/integrity and prediction distributions while labels are delayed, alongside output or service symptoms; distinguish monitoring priority from investigating data quality first.",
           "Evaluate the affected product segment separately from aggregates and use suitable time windows, accounting for temporal patterns or seasonality.",
@@ -222,9 +222,9 @@
       "request": "Search my notes for why a change in a serialized sklearn object’s __init__ might appear fine with existing objects but fail when new ones are created. Then follow the versioning link from Running an Older Service Version During Retraining and explain how to coordinate an incompatible deployment while replacement model artifacts are prepared. Distinguish compatible changes, current release steps, deprecated configuration-counter advice, and the temporary legacy-job approach. Use the anonymized Service A examples.",
       "added_reason": "Hard: Added to test whether the assistant can combine linked explanations and procedures into a consistent recommendation while distinguishing current instructions from explicitly deprecated guidance.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Unpickling restores saved state without executing __init__, so existing objects can conceal a broken initialization path that fresh creation or training later exercises. A compatible change inside a method or configuration does not automatically need a new versioned implementation; an incompatible artifact change does. In the Service A example, create a versioned implementation and corresponding tests with the placeholder migration script, increase ACTIVE_MODEL_VERSION, and let the deployment schema-setup step activate the corresponding schemas. The struck-out LEGACY_CONFIG_VERSION instruction is deprecated: the separate counter is no longer used and configuration changes are detected during deployment. While replacement models are being prepared, retain old tagged serving jobs. Copy the old Argo workflow template and cron job to legacy names, preserve the old image, remove generated and Helm-managed metadata, and connect the legacy cron job to its legacy templateRef. Verify the replacement artifacts are ready before retiring those jobs.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Explain that unpickling skips __init__, so existing objects can conceal a broken initialization path and do not automatically acquire newly initialized state.",
           "Distinguish compatible method/configuration changes from incompatible artifact changes; describe a versioned implementation with tests, an active-version update, and deployment schema setup for incompatibility.",
           "Identify the separate legacy configuration counter as deprecated, with configuration changes now detected during deployment; do not recommend the struck-out instruction.",
@@ -249,9 +249,9 @@
       "request": "Use my Mahalanobis Distance note and follow its links to the covariance and variance explanations. For a point whose displacement from the mean is (2, 3), with covariance matrix [[4, 3], [3, 9]], compute the squared Mahalanobis distance and the distance itself. Show the calculation and explain what the diagonal and off-diagonal terms mean and why simply using Euclidean distance or ignoring covariance changes the result.",
       "added_reason": "Hard: Added to test whether the assistant can follow links to supporting definitions, integrate several references into a numerical derivation, and correctly distinguish related quantities while showing its calculation.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "For displacement d = (2, 3), D² = dᵀC⁻¹d. The diagonal entries 4 and 9 are the two marginal variances; the symmetric off-diagonal entries 3 are their covariance, expressing coordinated variation. Since det(C) = 4×9 − 3×3 = 27, C⁻¹ = (1/27)[[9, −3], [−3, 4]]. Thus C⁻¹d = (1/27)(9, 6), so D² = (2×9 + 3×6)/27 = 4/3, and D = sqrt(4/3) ≈ 1.155. Mahalanobis distance accounts for both scale and correlation by using the inverse covariance matrix. Ordinary Euclidean distance would be sqrt(13) ≈ 3.606 and ignores those distribution properties. Keeping only the diagonal variances instead would give D² = 2²/4 + 3²/9 = 2 and D = sqrt(2), losing the effect of the positively correlated direction.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Use D² = dᵀC⁻¹d with the full covariance matrix and show an inverse equivalent to (1/27)[[9, −3], [−3, 4]].",
           "Report squared distance 4/3 and distance approximately 1.155, distinguishing the two; numerical rounding within 0.01 is acceptable.",
           "Explain that diagonal entries are marginal variances, off-diagonal entries are covariance, and the metric accounts for both scale and correlation.",
@@ -276,9 +276,9 @@
       "request": "Start from RAG Evaluation and follow its linked metrics and dataset notes; search for the definitions of repeated-trial success. A RAG assistant sometimes faithfully repeats an objectively false retrieved note, and sometimes contradicts correct retrieved evidence. Explain how to distinguish these failures and which metrics to inspect, and how to encode them as meaningful gold cases. Finally, assuming independent trials with a 0.5 success probability each, compute and interpret pass@3 versus pass^3. Does a good best-of-three score establish reliable success on every attempt?",
       "added_reason": "Hard: Added to test whether the assistant can integrate several linked references to answer a multipart question, preserve distinctions between similar evaluation concepts, and apply their definitions in a correct probability calculation.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "Faithfulness asks whether the answer is supported by retrieved context; it does not establish that the context is true. Repeating an objectively false note can therefore be faithful but still objectively wrong, matching the RAG note’s hallucination criterion. Contradicting correct retrieved evidence is a generation/grounding failure with poor faithfulness; synthesis across several correct documents can also expose reasoning failures. Inspect context recall for missing relevant context, context precision for irrelevant retrievals, and answer relevance separately. Do not blame retrieval merely because an answer ignored evidence that was correctly retrieved. Add representative cases for both failure modes with expert-agreed ideal answers and/or clear acceptance criteria, including the correct factual expectation and the distinction between grounding and truth. Keep a consistent schema, version the additions, and record why each case exists; good data defines the failures the evaluation can detect. For independent trials with p = 0.5, pass@3 = 1 − (1 − p)³ = 0.875: at least one of three attempts succeeds. pass^3 = p³ = 0.125: all three attempts succeed. A high best-of-three score therefore does not establish consistent success on every attempt.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Distinguish support by retrieved context (faithfulness) from objective truth: repeating false context may be faithful but objectively false under the note’s hallucination definition.",
           "Classify contradiction of correct retrieved evidence as a generation/grounding problem, and distinguish this from missing or irrelevant retrieval using context recall and precision; keep answer relevance separate.",
           "Propose representative cases for both failure modes with expert-agreed ground truth or clear acceptance criteria, consistent schema, versioning, and an explicit reason for each addition.",
@@ -304,9 +304,9 @@
       "request": "Find the note containing the observation that \"the graph is not the goal\", and use it together with the notes pointing to Note taking is thinking and that note itself. Propose a workflow for processing a workshop into reusable knowledge: what should be archived, how should permanent notes be written and connected, what role should MOCs play, and why does this reduce mental load? Distinguish established findings in these notes from tentative ideas or personal reservations about a daily-review routine.",
       "added_reason": "Hard: Added to test whether the assistant can find evidence despite unreliable titles and stale links, discover related notes through backlinks, and synthesize a workflow without turning tentative ideas or personal reservations into established requirements.",
       "dataset_version": 2,
-      "ground_truth": {
+      "answer_criteria": {
         "ideal_answer": "The observation is in 2 areas/soft skills/z MOC Personal Knowledge Management.md. It treats workshop notes as literature notes: process them into permanent notes after the workshop, then archive the original workshop material. Extract each worthwhile idea into a self-contained note, written in your own words, and connect it to existing related ideas and the context where you want to discover it again. MOCs are maps/indexes linking related notes or sub-MOCs, providing entry points rather than making the graph itself the objective. Knowledge work should accrete, an incoming link to Note taking is thinking, explains that isolated or transient outputs disappear or require mental effort to keep connected. Note taking is thinking describes reifying, organizing, and connecting ideas so they remain discoverable, evolve, and accumulate. The workflow externalizes those relationships and reduces cognitive load. Preserve the caveats: evergreen-note principles are marked as needing research, and the end-of-day review routine is a described creator’s approach with a personal reservation that it may not work well for the author, not an established mandatory practice.",
-        "answer_criteria": [
+        "additional_criteria": [
           "Identify the actual PKM MOC containing the graph observation rather than assuming a stale z> title-based link names an existing file.",
           "Treat workshop notes as literature/source material to process into permanent notes and then archive; permanent notes should contain one self-contained idea in the writer’s own words.",
           "Connect permanent ideas to existing notes and future discovery contexts, and describe MOCs as indexes/hubs of related notes or sub-MOCs; make idea synthesis rather than graph appearance the goal.",

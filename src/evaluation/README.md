@@ -35,10 +35,11 @@ customize candidate instructions. The judge uses the bundled `CONTENT_PROMPT`,
 `CONCISION_PROMPT`, and `TASK_USEFULNESS_PROMPT`; their text and versions are saved
 in reports.
 
-`SemanticJudge(model, structured_output_kwargs).grade(request, final_answer,
-ground_truth)` also grades saved answers. Import `SemanticJudge` from
-`src.evaluation.judge` and `GroundTruth` from `src.gold_dataset.validate`.
-The result exposes `scores` and `judge_calls`.
+`SemanticJudge(model=model).grade(request=request, final_answer=final_answer,
+answer_criteria=answer_criteria)` also grades saved answers. Import `SemanticJudge` from
+`src.evaluation.judge` and `AnswerCriteria` from `src.gold_dataset.validate`.
+The result exposes `scores` and `judge_calls`. Each score uses `criterion_id`.
+Stages are mutable and reused across answers; calls on one judge must be sequential.
 
 ## Model configuration
 
@@ -74,9 +75,9 @@ conversation-continuation IDs are rejected.
 
 Each grade makes three sequential calls:
 
-| Stage | Supplied evidence | Expectation IDs |
+| Stage | Supplied evidence | Criterion IDs |
 | --- | --- | --- |
-| Content | Request, final answer, ideal answer, case-specific criteria | `ideal_answer`, applicable `answer_criteria[i]` |
+| Content | Request, final answer, ideal answer, case-specific criteria | `ideal_answer`, applicable `additional_criteria[i]` |
 | Concision | Request and final answer only | `quality.concision` |
 | Task usefulness | Request and final answer only | `quality.task_usefulness` |
 
@@ -92,7 +93,7 @@ appropriately scoped, formatted, and usable deliverable.
 
 Scores are integers: 1 fails, 2 has major gaps, 3 partially meets the requirement,
 4 meets it with minor issues, and 5 fully meets it. Missing or contradicted
-essential content scores at most 3. Each expectation needs one score and a short
+essential content scores at most 3. Each criterion needs one score and a short
 explanation; missing, duplicate, unknown, or malformed scores invalidate grading.
 
 | Status | Meaning |
@@ -117,9 +118,10 @@ setup/persistence errors.
 Each run writes `report.json` and `summary.md` before execution and after every
 repeat. Files are replaced atomically; JSON is authoritative.
 
-Report format `3` includes answers, scores, explanations, tool evidence, traces,
+Report format `4` includes answers, scores, explanations, tool evidence, traces,
 credential-free configuration, and versioned prompt snapshots. `judge_prompt`
 stores the content prompt; `quality_judge_prompts` stores the two quality prompts.
+Scores and tool-check results identify each requirement with `criterion_id`.
 Each repeat's `judge_calls` records `{stage, raw_response}` in call order, using
 `null` when an attempted call produced no response.
 
@@ -131,4 +133,4 @@ Markdown.
 `elapsed_seconds` includes tool execution, grading, and suite overhead.
 
 Dataset contents are not embedded in reports. Use the corresponding Git revision
-when regrading historical answers against their original expectations.
+when regrading historical answers against their original criteria.

@@ -158,7 +158,7 @@ def run_evaluation(
     directory = Path(report_destination).resolve() / run_id
     directory.mkdir(parents=True, exist_ok=False)
     report: dict[str, Any] = {
-        "report_version": 3,
+        "report_version": 4,
         "run_id": run_id,
         "started_at": started,
         "updated_at": started,
@@ -243,7 +243,7 @@ def run_evaluation(
                     grade = evaluator.grade(
                         request=case.request,
                         final_answer=harness_result.final_answer,
-                        ground_truth=case.ground_truth,
+                        answer_criteria=case.answer_criteria,
                     )
                 except JudgeError as exc:
                     result["status"] = "judge_error"
