@@ -1,78 +1,51 @@
-# Docstrings
+# Repository guidance
 
-Follow the behavioral docstring pattern in `src/tools/get_backlinks.py`: start
-with a concise description of the result, then explain relevant inputs,
-resolution or validation rules, and edge cases. Add a `Raises:` section for
-exceptions callers must handle. For functions that return error envelopes,
-describe the returned error codes instead. Describe observable behavior rather
-than narrating implementation steps, and keep docstrings consistent with the code.
+## Python conventions
 
-# Function signatures
+- Prefer positional-or-keyword parameters; require keyword-only parameters only
+  for a concrete interface need. Use explicit keywords in calls except for
+  positional-only parameters and variadic positional arguments.
+- Keep `__init__.py` docstring-only and import symbols directly from their
+  defining modules. Put executable entrypoints in named modules with an
+  `if __name__ == "__main__"` guard; invoke them with `python -m package.module`.
+  Do not add package-level `__main__.py`.
 
-Prefer positional-or-keyword parameters over keyword-only `*` parameters unless
-the interface has a concrete need to require keyword arguments.
+## Data and validation
 
-# Data models
+- Prefer named Pydantic models for records that need validation or a clear
+  contract; keep trivial local data simple. Nest models when useful.
+- Validate untrusted data at boundaries, then trust validated models and
+  internal contracts. Retain checks for meaningful value constraints, external
+  responses, filesystem boundaries, and operational failures. Avoid redundant
+  validation or normalization and fallbacks that hide programming errors.
+- Copy mutable data only for mutation isolation or snapshot ownership.
+- Extract cohesive validation into documented, descriptively named helpers.
+  Keep class-specific construction, validation and other helpers on their class.
 
-Prefer named Pydantic models over positional tuples or dictionaries when data has
-a stable structure with more than 3 fields. Use nested models where necessary.
+## Documentation
 
-# Inline comments
+- Follow `src/tools/get_backlinks.py`: describe the result, relevant inputs,
+  resolution or validation rules, and edge cases. Document caller-relevant
+  exceptions in `Raises:` or returned error codes for error envelopes.
+  Describe observable behavior and keep docstrings consistent with the code.
+- Comment on non-obvious model-field purposes, relationships, and transformations,
+  in inline comments.
+- State current facts directly in Markdown; omit change-history narration.
 
-Add concise inline comments explaining model fields whose purpose or relationships
-are not obvious, and the purpose of non-obvious data transformations.
+## Verification and evaluations
 
-# Validation and defensive coding
-
-Validate untrusted data at its boundary, then trust validated models, annotated
-internal interfaces, and invariants established by the caller. Do not dump and
-revalidate model instances, repeat normalization, check types already guaranteed
-by parsing or schemas, or supply fallbacks for required internal fields. Let
-programming errors surface instead of silently treating them as missing data.
-Keep checks for meaningful value constraints, external responses, filesystem
-boundaries, and operational failures. Copy mutable data only when mutation or
-snapshot ownership requires it.
-
-Keep class-specific construction and validation helpers as private methods on the
-owning class. Use descriptive names such as `_construct_content_grading_payload`
-and `_validate_scores`.
-
-Extract cohesive validation blocks into documented methods. Describe accepted
-inputs, edge cases, and exceptions.
-
-# Function and method calls
-
-Always use explicit keyword arguments for all function and method calls.
-
-# Refactoring
-
-For behavior-preserving refactors, adapt existing tests rather than adding tests
-that merely mirror the new structure.
-
-When editing Markdown documentation, replace outdated facts with the current
-facts directly. Do not narrate that something was changed or updated.
-
-# Package layout and execution
-
-Keep `__init__.py` files docstring-only. Define implementation in descriptive
-modules and import symbols directly from their defining modules rather than
-re-exporting them through package initializers. Put executable entrypoints in
-named modules with an `if __name__ == "__main__"` guard, invoked as
-`python -m package.module`. Do not add package-level `__main__.py` entrypoints.
-
-# System prompt versions
-
-When changing a bundled `SystemPrompt`'s text, increment its positive integer
-version, normally by one. Versions are independent for each prompt .
-# Gold dataset entries
-
-Name each case `id` after its evaluation purpose or the assistant behavior being
-tested, rather than the subject matter of the retrieved notes. Prefer three
-lowercase parts delimited by hyphens, such as `multi-source-integration`.
-
-Write each `added_reason` as an evaluation rationale: why the case belongs in
-the dataset and which assistant capability, behavior, or failure mode it tests.
-Describe the intended coverage rather than summarizing the source notes or
-repeating facts from the expected answer. Put answer criteria in
-`answer_criteria.ideal_answer` and `answer_criteria.additional_criteria`, and
-deterministic tool requirements in `tool_checks`.
+- For code changes, run affected tests with `uv run --locked python -m pytest -q`
+  and suitable test paths; run `uv run --locked ruff check src tests` and
+  `uv run --locked mypy src tests`.
+- Use test-driven development when you imlement new functionality.
+- Write unit tests to cover the happy path, edge cases and expected failure modes.
+  Tests should cover the behavior of a method or class, not implementation details.
+- When a test fails due to a code change, fix the code and not the test (unless
+  the desired behavior of the system changed). Don't fix broken tests by deleting
+  them.
+- For behavior-preserving refactors, adapt existing tests rather than adding
+  tests that mirror the implementation structure.
+- When a bundled `SystemPrompt` text changes, increment its version independently,
+  normally by one.
+- Before editing gold cases, follow the authoring rules in
+  [the dataset guide](src/gold_dataset/README.md#adding-and-loading-cases).
