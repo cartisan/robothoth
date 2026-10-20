@@ -9,7 +9,13 @@ from uuid import uuid4
 
 from langchain_core.language_models import BaseChatModel
 
-from src.evaluation.judge import JudgeError, SemanticJudge
+from src.evaluation.judge import (
+    CONCISION_PROMPT,
+    CONTENT_PROMPT,
+    TASK_USEFULNESS_PROMPT,
+    JudgeError,
+    SemanticJudge,
+)
 from src.evaluation.reporting import (
     json_value,
     model_configuration,
@@ -31,7 +37,7 @@ from src.harness import (
 )
 from src.utils import SystemPrompt
 
-DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/test_vault"
+DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/extended_test_vault"
 
 
 def _now() -> str:
@@ -119,8 +125,8 @@ def run_evaluation(
 
     Each repeat gets a fresh harness conversation and semantic grade. Valid
     answers are graded even when tool checks fail. A repeat passes only when all
-    semantic scores are at least 4 and every tool requirement passes. Harness and
-    judge errors continue to later repeats and make the report incomplete;
+    content and quality scores are at least 4 and every tool requirement passes.
+    Harness and judge errors continue to later repeats and make the report incomplete;
     scored failures do not. Pass rates use only passed and failed repeats.
     Costs sum candidate and judge tokens, retaining unknown usage. Wall-clock
     durations include tool execution, grading, and suite overhead between repeats.
@@ -152,7 +158,7 @@ def run_evaluation(
     directory = Path(report_destination).resolve() / run_id
     directory.mkdir(parents=True, exist_ok=False)
     report: dict[str, Any] = {
-        "report_version": 2,
+        "report_version": 4,
         "run_id": run_id,
         "started_at": started,
         "updated_at": started,
@@ -166,7 +172,11 @@ def run_evaluation(
         "repeats": repeats,
         "expected_repeats": len(dataset.entries) * repeats,
         "candidate_system_prompt": system_prompt.model_dump(),
-        "judge_prompt": evaluator.prompt.model_dump(),
+        "judge_prompt": CONTENT_PROMPT.model_dump(),
+        "quality_judge_prompts": {
+            "concision": CONCISION_PROMPT.model_dump(),
+            "task_usefulness": TASK_USEFULNESS_PROMPT.model_dump(),
+        },
         "candidate_config": without_credentials(
             candidate_config
             if candidate_config is not None
@@ -203,7 +213,7 @@ def run_evaluation(
                 "trace": None,
                 "tool_checks": [],
                 "scores": [],
-                "raw_judge_response": None,
+                "judge_calls": [],
                 "error": None,
             }
             try:
@@ -233,15 +243,15 @@ def run_evaluation(
                     grade = evaluator.grade(
                         request=case.request,
                         final_answer=harness_result.final_answer,
-                        ground_truth=case.ground_truth,
+                        answer_criteria=case.answer_criteria,
                     )
                 except JudgeError as exc:
                     result["status"] = "judge_error"
                     result["error"] = _error_record(exc=exc)
-                    result["raw_judge_response"] = json_value(value=exc.raw_response)
+                    result["judge_calls"] = json_value(value=exc.judge_calls)
                 else:
                     result["scores"] = json_value(grade.scores)
-                    result["raw_judge_response"] = json_value(grade.raw_response)
+                    result["judge_calls"] = json_value(value=grade.judge_calls)
                     passed = all(item.passed for item in checks) and all(
                         item.score >= 4 for item in grade.scores
                     )

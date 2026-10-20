@@ -11,10 +11,6 @@
 ## Best Practices
 - [[Monitoring and Observability]]
 
-## Alcemy
-- [[ForecastPipeline]]
-- [[Recipe Optimizer ML]]
-
 ---
 Associations:
-Tags: #🌱  #🗺️ 
+Tags: #🌱  #🗺️

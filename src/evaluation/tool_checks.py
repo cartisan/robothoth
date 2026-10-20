@@ -21,7 +21,7 @@ class CallReference:
 class ToolCheckResult:
     """Retain one requirement's result, explanation, and relevant attempts."""
 
-    expectation_id: str
+    criterion_id: str
     passed: bool
     explanation: str
     calls: tuple[CallReference, ...]
@@ -62,7 +62,10 @@ def evaluate_tool_checks(
     accessed. Empty requirements return an empty result tuple.
     """
     attempts = [
-        (CallReference(i, j, call.call_id), call)
+        (
+            CallReference(invocation_index=i, tool_index=j, call_id=call.call_id),
+            call,
+        )
         for i, invocation in enumerate(trace.calls)
         for j, call in enumerate(invocation.tool_calls)
     ]
@@ -72,10 +75,12 @@ def evaluate_tool_checks(
         passed = any(_successful(call) for _, call in matching)
         results.append(
             ToolCheckResult(
-                f"required_tools[{index}]",
-                passed,
-                f"{'Found' if passed else 'Missing'} successful {name} call.",
-                tuple(ref for ref, _ in matching),
+                criterion_id=f"required_tools[{index}]",
+                passed=passed,
+                explanation=(
+                    f"{'Found' if passed else 'Missing'} successful {name} call."
+                ),
+                calls=tuple(ref for ref, _ in matching),
             )
         )
     for index, expected in enumerate(tool_checks.required_note_reads):
@@ -85,20 +90,25 @@ def evaluate_tool_checks(
         passed = any(_successful(call) for _, call in matching)
         results.append(
             ToolCheckResult(
-                f"required_note_reads[{index}]",
-                passed,
-                f"{'Found' if passed else 'Missing'} successful read of {expected}.",
-                tuple(ref for ref, _ in matching),
+                criterion_id=f"required_note_reads[{index}]",
+                passed=passed,
+                explanation=(
+                    f"{'Found' if passed else 'Missing'} successful read of {expected}."
+                ),
+                calls=tuple(ref for ref, _ in matching),
             )
         )
     for index, name in enumerate(tool_checks.forbidden_tools):
         matching_refs = tuple(ref for ref, call in attempts if call.name == name)
         results.append(
             ToolCheckResult(
-                f"forbidden_tools[{index}]",
-                not matching_refs,
-                f"{name} {'was attempted' if matching_refs else 'was not attempted'}.",
-                matching_refs,
+                criterion_id=f"forbidden_tools[{index}]",
+                passed=not matching_refs,
+                explanation=(
+                    f"{name} "
+                    f"{'was attempted' if matching_refs else 'was not attempted'}."
+                ),
+                calls=matching_refs,
             )
         )
     if tool_checks.allowed_tools is not None:
@@ -107,12 +117,14 @@ def evaluate_tool_checks(
         )
         results.append(
             ToolCheckResult(
-                "allowed_tools",
-                not violations,
-                "Attempts outside allowlist."
-                if violations
-                else "All attempts allowed.",
-                violations,
+                criterion_id="allowed_tools",
+                passed=not violations,
+                explanation=(
+                    "Attempts outside allowlist."
+                    if violations
+                    else "All attempts allowed."
+                ),
+                calls=violations,
             )
         )
     return tuple(results)

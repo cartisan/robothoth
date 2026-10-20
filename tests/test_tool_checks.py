@@ -146,16 +146,18 @@ def test_invalid_or_contradictory_requirements_rejected(
         ToolChecks.model_validate(value)
 
 
-def test_migrated_dataset_expectations() -> None:
-    search, multi, synthesis = load_dataset()
+def test_migrated_dataset_criteria() -> None:
+    search, multi, synthesis = load_dataset(version=1)
     assert search.tool_checks.required_tools == ["list_notes"]
     assert search.tool_checks.allowed_tools == ["list_notes"]
-    assert search.ground_truth.ideal_answer and not search.ground_truth.answer_criteria
+    assert (
+        search.answer_criteria.ideal_answer
+        and not search.answer_criteria.additional_criteria
+    )
     assert multi.tool_checks.required_tools == ["list_notes", "read_note"]
-    assert multi.ground_truth.ideal_answer
-    assert multi.ground_truth.answer_criteria
-    assert synthesis.ground_truth.ideal_answer
-    assert not synthesis.ground_truth.answer_criteria
+    assert multi.answer_criteria.ideal_answer
+    assert synthesis.answer_criteria.ideal_answer
+    assert not synthesis.answer_criteria.additional_criteria
     assert synthesis.tool_checks.required_note_reads == [
         "2 areas/ai engineering/evaluation/Rubric Based Evaluation.md",
         "2 areas/ai engineering/evaluation/LLM-as-a-Judge.md",

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.evaluation.judge import DEFAULT_JUDGE_PROMPT
+from src.evaluation.judge import CONTENT_PROMPT
 from src.harness import SYSTEM_PROMPT
 from src.utils import SystemPrompt
 
@@ -34,5 +34,5 @@ def test_prompt_preserves_text_and_is_immutable() -> None:
 
 def test_bundled_prompts_share_the_model() -> None:
     assert isinstance(SYSTEM_PROMPT, SystemPrompt)
-    assert isinstance(DEFAULT_JUDGE_PROMPT, SystemPrompt)
-    assert SYSTEM_PROMPT is not DEFAULT_JUDGE_PROMPT
+    assert isinstance(CONTENT_PROMPT, SystemPrompt)
+    assert SYSTEM_PROMPT is not CONTENT_PROMPT

@@ -31,13 +31,13 @@ def _nonblank(value: str) -> str:
     return value
 
 
-class GroundTruth(BaseModel):
+class AnswerCriteria(BaseModel):
     """Reference answer and/or required criteria for evaluating a response."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
     ideal_answer: str | None = None
-    answer_criteria: list[str] | None = None
+    additional_criteria: list[str] | None = None
 
     @field_validator("ideal_answer")
     @classmethod
@@ -45,17 +45,17 @@ class GroundTruth(BaseModel):
         """Accept an absent answer or a nonblank reference answer."""
         return None if value is None else _nonblank(value)
 
-    @field_validator("answer_criteria")
+    @field_validator("additional_criteria")
     @classmethod
     def validate_criteria(cls, value: list[str] | None) -> list[str] | None:
         """Accept absent criteria or nonblank criteria, including an empty list."""
         return None if value is None else [_nonblank(item) for item in value]
 
     @model_validator(mode="after")
-    def require_expectation(self) -> "GroundTruth":
+    def require_criterion(self) -> "AnswerCriteria":
         """Require a usable answer or at least one criterion."""
-        if self.ideal_answer is None and not self.answer_criteria:
-            raise ValueError("ideal_answer or nonempty answer_criteria is required")
+        if self.ideal_answer is None and not self.additional_criteria:
+            raise ValueError("ideal_answer or nonempty additional_criteria is required")
         return self
 
 
@@ -105,7 +105,7 @@ class ToolChecks(BaseModel):
 
 
 class GoldEntry(BaseModel):
-    """One versioned evaluation request with its reason and ground truth."""
+    """One versioned evaluation request with its reason and answer criteria."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -113,7 +113,7 @@ class GoldEntry(BaseModel):
     request: str
     added_reason: str
     dataset_version: int = Field(gt=0)
-    ground_truth: GroundTruth
+    answer_criteria: AnswerCriteria
     tool_checks: ToolChecks
 
     @field_validator("id", "request", "added_reason")
@@ -197,7 +197,7 @@ def load_dataset(
     """Return validated entries in file order, optionally through a version.
 
     The entire file is validated before filtering. Version 0 selects no entries;
-    later versions include all earlier cases, using their current expectations.
+    later versions include all earlier cases, using their current criteria.
 
     Raises:
         ValueError: If version is negative.

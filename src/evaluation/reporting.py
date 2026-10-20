@@ -115,11 +115,29 @@ def _sum_tokens(records: list[dict[str, Any]], field: str) -> int | None:
     return total
 
 
+def _judge_token_usage(calls: list[dict[str, Any]]) -> int | None:
+    """Return attempted judge calls' total tokens, or None if any usage is unknown.
+
+    Raw provider metadata must contain a nonnegative integer total; missing
+    responses, absent usage, and malformed totals make the sum unknown. An empty
+    sequence of attempted calls costs zero.
+    """
+    total = 0
+    for call in calls:
+        raw = call["raw_response"]
+        usage = raw.get("usage_metadata") if isinstance(raw, dict) else None
+        tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
+        if type(tokens) is not int or tokens < 0:
+            return None
+        total += tokens
+    return total
+
+
 def repeat_token_usage(result: dict[str, Any]) -> dict[str, int | None]:
     """Return candidate, judge, and combined token costs for a completed repeat.
 
     Candidate cost includes every traced invocation, including failed attempts.
-    Judge cost comes from the raw response's usage metadata, even when grading
+    Judge cost sums usage across all attempted calls, even when grading
     validation fails. A skipped judge costs zero. Missing or invalid provider
     usage makes that component and the combined total unknown, while known
     components remain available. Cost follows Trace's token unit, not currency.
@@ -127,12 +145,7 @@ def repeat_token_usage(result: dict[str, Any]) -> dict[str, int | None]:
     candidate_tokens = _sum_tokens(
         records=result["trace"]["calls"], field="total_tokens"
     )
-    judge_tokens: int | None = 0
-    if result["status"] != "harness_error":
-        raw = result["raw_judge_response"]
-        usage = raw.get("usage_metadata") if isinstance(raw, dict) else None
-        tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
-        judge_tokens = tokens if type(tokens) is int and tokens >= 0 else None
+    judge_tokens = _judge_token_usage(calls=result["judge_calls"])
     total_tokens = (
         candidate_tokens + judge_tokens
         if candidate_tokens is not None and judge_tokens is not None
@@ -229,7 +242,7 @@ def _time_text(seconds: float) -> str:
 def _repeat_markdown(result: dict[str, Any]) -> list[str]:
     """Return one repeat's status, trace checks, judge ratings, and available errors.
 
-    Every tool check and semantic expectation includes its full explanation.
+    Every tool check and semantic criterion includes its full explanation.
     Judge scores of at least 4 pass. Empty checks and unavailable grades are
     explicit, and errors include any chained original failure.
     Cost includes candidate and judge tokens; elapsed time includes tools and
@@ -261,7 +274,7 @@ def _repeat_markdown(result: dict[str, Any]) -> list[str]:
                     f"tool {reference['tool_index'] + 1} ({reference['call_id']})"
                 )
             lines += [
-                f"| {_table_text(text=check['expectation_id'])} | {status} | "
+                f"| {_table_text(text=check['criterion_id'])} | {status} | "
                 f"{_table_text(text=check['explanation'])} | "
                 f"{_table_text(text=evidence) if evidence else 'None'} |"
             ]
@@ -270,13 +283,13 @@ def _repeat_markdown(result: dict[str, Any]) -> list[str]:
     lines += ["", "Judge ratings (passing score: 4 or 5):", ""]
     if result["scores"]:
         lines += [
-            "| Expectation | Score | Result | Explanation |",
+            "| Criterion | Score | Result | Explanation |",
             "| --- | --- | --- | --- |",
         ]
         for score in result["scores"]:
             status = "passed" if score["score"] >= 4 else "failed"
             lines += [
-                f"| {_table_text(text=score['expectation_id'])} | "
+                f"| {_table_text(text=score['criterion_id'])} | "
                 f"{score['score']} / 5 | {status} | "
                 f"{_table_text(text=score['explanation'])} |"
             ]

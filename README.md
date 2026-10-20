@@ -1,9 +1,6 @@
 # Robothoth
 
-A synchronous tool harness for navigating an Obsidian vault with a LangChain
-chat model.
-
-Install and run an example:
+A synchronous LangChain tool harness for navigating an Obsidian vault.
 
 ```sh
 uv sync --locked --dev
@@ -12,26 +9,25 @@ uv run --locked python -m src.main claude
 uv run --locked python -m src.main kimi
 ```
 
-The examples load `.env`, search the bundled test vault, and print the answer
-and invocation trace. OpenAI uses `OPENAI_API_KEY` and `gpt-6-luna`; Claude uses
-`ANTHROPIC_API_KEY` and `claude-haiku-5-5`. The Kimi example uses `KIMI_API_KEY`
-and `kimi-k2.6` through Moonshot's OpenAI-compatible endpoint. Running
-`src.main` without an argument defaults to OpenAI. The examples are also
-available as `execute_openai()`, `execute_claude()`, and `execute_kimi()` in
-`src.main`.
+Examples load `.env`, search the bundled test vault, and print the answer and
+trace. Omitting the provider defaults to OpenAI.
 
-The manually maintained [gold dataset](src/gold_dataset/README.md) contains
-validated evaluation cases. Run `uv run --locked python -m src.golden_dataset.validate` to
-validate the bundled file and print its case count.
+| Provider | Model | Credential |
+| --- | --- | --- |
+| `openai` | `gpt-6-luna` | `OPENAI_API_KEY` |
+| `claude` | `claude-haiku-5-5` | `ANTHROPIC_API_KEY` |
+| `kimi` | `kimi-k2.6` via Moonshot | `KIMI_API_KEY` |
 
-Pass a configured, tool-capable LangChain `BaseChatModel` directly:
+## Python API
+
+Pass a configured, tool-capable `BaseChatModel`:
 
 ```python
 from langchain_openai import ChatOpenAI
 from src.harness import run_in_harness
 
 result = run_in_harness(
-    ChatOpenAI(model="gpt-6-luna"),
+    chat_model=ChatOpenAI(model="gpt-6-luna"),
     user_prompt="Find notes about agentic software engineering",
     vault_path="/path/to/vault",
     tool_binding_kwargs={"strict": True},
@@ -40,32 +36,24 @@ print(result.final_answer)
 print(result.trace)
 ```
 
-The harness binds registered tool schemas at the start of each run and keeps
-that run's messages local. It executes tool calls, returns exact dispatcher
-results as `ToolMessage` values, enforces the invocation limit, and traces
-model responses and usage. Every invocation owns a fresh trace and conversation.
-Pass a `SystemPrompt(version=2, text="...")` from `src.utils` as `system_prompt`
-to evaluate different candidate instructions through the Python API. Operational
-failures raise `HarnessError` with the partial trace in `error.trace` and the
-original exception chained as `error.__cause__`. Invalid arguments raise
-`ValueError` before execution. Missing token usage remains unknown. Pass
-`model_label` when you want a particular fallback label for failed calls;
-otherwise the chat model's class name is used.
+Each run has a fresh conversation and trace, with tool calls and token usage
+recorded. Invalid inputs raise `ValueError`; operational failures raise
+`HarnessError` with a partial `trace` and chained cause. Pass a versioned
+`SystemPrompt` from `src.utils` as `system_prompt` to customize instructions.
 
-Evaluate all gold cases with an independently configured judge:
+## Evaluation
 
 ```sh
 uv run --locked python -m src.evaluation.run --output-directory evaluation_runs
-uv run --locked python -m src.evaluation.run --config evaluation.json \
-  --dataset-path src/golden_dataset/dataset.json --vault-path tests/test_vault \
-  --repeats 3 --max-api-calls 20 \
-  --output-directory evaluation_runs
+uv run --locked python -m src.evaluation.run --config evaluation.json
 ```
 
-The default candidate is `gpt-6-luna` at medium reasoning; the default judge is
-`gpt-6.1-sol` at medium reasoning with the Responses API and native structured
-output. These judge settings follow the [official model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-Both use environment credentials, loaded from `.env` when run through the CLI.
-The CLI always uses the bundled candidate and judge system prompts.
-See [evaluation configuration and reports](src/evaluation/README.md) for the
-Python API, provider settings, scoring rules, and report format.
+The [gold dataset](src/gold_dataset/README.md) contains 14 cases, including five
+hard cases. Evaluations use `tests/extended_test_vault` with 152 sanitized notes;
+examples and focused tool tests use the 14-note `tests/test_vault`.
+See [vault provenance and boundaries](tests/vault_fixtures.md).
+
+The default candidate is `gpt-6-luna` and the judge is `gpt-6.1-sol`, both at
+medium reasoning. Content, concision, and task usefulness are graded in separate
+calls with fresh histories. Passing requires every score to reach 4/5 and every
+tool check to pass. See [evaluation configuration and reports](src/evaluation/README.md).

@@ -1,0 +1,51 @@
+- Principles:
+	- people and *stories* are the main drivers that make hires want to join a company
+	- authentic *employer brand* is a big driver of applications: what we say our values are and how we actually live them
+- 4 ways of getting candidates
+	- A: Inbound - candidate reaching out to us
+	- B: Referral - team or community shares candidate with us
+	- C: Outbound - we reach out to candidate
+	- D: Recruiter - external organization helping us find candidate
+- Process:
+	- there is a hiring manager responsible for driving the process
+		- responsible for keeping the process going - delegate tasks that come up
+		- responsible for filling the pipeline's via inbounds and referrals
+		- manage the pipeline via workable
+		- should be part of one of the two big interviews
+	- supposed to be *repeatable* and *transparent*
+		- our process atm is not repeatable in that grading/expectations are highly dependent on interviewers
+	- Questions:
+		- *Past behavior is the best indicator of future behavior* <--make behavioural questions, not hypotheticals or brain teasers
+		- Enable interviewee to answers based on CAR framework: Context, Action, Result
+			- Interviewers have to probe every question, to extract context, actions and results, context
+			- Interview should be criteria led, not question led
+				- its okay to deviate from structured questionaire in order to get to the criteria
+			- Interview should feel conversational, not like a interrogation
+	- Scorecard:
+		- It is critical to take good notes during interview: notes should summarize and reflect candidates answers, not interviewers assessment of the answer (so decision committee can revise notes)
+		- each category has to be rated: excellent, good, poor
+	- Decision Committee
+		- Last step of process, often each candidate gets one but often we can combine several candidates at same stage into same meeting
+		- Aim at getting unanimous decision via discussion, no voting 
+		- Committee not only assesses candidate but also interview quality
+		- Hiring is about *buying into an interviewers trajectory*, not only their current performance
+-  Diversity
+	- Diversity: how many people in how many categories do we have
+	- Inclusion: are people feeling included, do they thrive, will new people feel like they belong
+	- Use *process that mitigates bias*, and by that, reduce discrimination
+	- positive action vs. positive discrimination
+		- positive action: try making our pipeline as diverse as possible (legal)
+		- positive discrimination: letting diversity of candidate influence our selection (illegal)
+- Tools: 
+	- Workable
+	- Join (like workable, but has more job boards and candidates are automatically transferred to workable)
+
+- Additional insights:
+	- LinkedIn Profile should be optimized for Recruiter setup:
+		- Have skills listed that are not the most common, but also not the most rare (the first sort will not be selected by recruiters because of too many candidates, the  latter they won't because its not helpful)
+		- Former job titles are also relevant
+
+
+---
+Associations: [[z> MOC Hiring]], [[workshop]]
+Tags: #📥️  -> decompse into evergreen notes
