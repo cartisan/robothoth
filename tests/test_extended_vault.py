@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from unicodedata import normalize
 
 import pytest
 
@@ -45,19 +46,28 @@ def test_snapshot_matches_manifest_and_excludes_nonknowledge_records() -> None:
 
     Verification uses only repository files, without accessing the source vault.
     The manifest accounts for every note and attachment but stays outside the
-    navigable corpus so metadata does not become an answer source.
+    navigable corpus so metadata does not become an answer source. Canonically
+    equivalent Unicode filenames compare equally across checkout filesystems;
+    file contents must still match their exact recorded hashes.
     """
     manifest = json.loads(
         s=(TESTS / "extended_test_vault_manifest.json").read_text(encoding="utf-8")
     )
     assert "source_vault" not in manifest
     root = Path(VAULT)
-    actual = {
-        path.relative_to(root).as_posix()
+    files = [
+        path
         for path in root.rglob(pattern="*")
         if path.is_file()
+    ]
+    # Keep the actual paths for reads: Linux distinguishes NFC and NFD names.
+    actual = {
+        normalize("NFC", path.relative_to(root).as_posix()): path for path in files
     }
-    assert actual == {item["path"] for item in manifest["files"]}
+    expected = {normalize("NFC", item["path"]) for item in manifest["files"]}
+    assert len(actual) == len(files)
+    assert len(expected) == len(manifest["files"])
+    assert set(actual) == expected
     notes = list_notes(vault_path=VAULT)
     assert len(notes) == manifest["note_count"] == 152
     assert len(actual) - len(notes) == manifest["attachment_count"] == 0
@@ -74,12 +84,14 @@ def test_snapshot_matches_manifest_and_excludes_nonknowledge_records() -> None:
         for path in actual
     )
     for item in manifest["files"]:
-        path = root / item["path"]
+        path = actual[normalize("NFC", item["path"])]
         assert not path.is_symlink()
         assert hashlib.sha256(string=path.read_bytes()).hexdigest() == item["sha256"]
         if item["kind"] == "attachment":
             assert item["referenced_by"]
-            assert set(item["referenced_by"]) <= set(notes)
+            assert {
+                normalize("NFC", relative) for relative in item["referenced_by"]
+            } <= {normalize("NFC", relative) for relative in notes}
     assert manifest["unavailable_attachments"]
     assert manifest["unresolved_note_links"]
 
@@ -174,13 +186,14 @@ def test_graph_only_reference_answers_match_the_snapshot() -> None:
         "4 archive/Observability Course - Intro.md",
         "4 archive/Observability Course - Monitoring Metrics.md",
     ]
-    assert get_backlinks(
+    backlinks = get_backlinks(
         vault_path=VAULT,
         notepath=COVARIANCE,
-    ) == [
+    )
+    assert [normalize("NFC", path) for path in backlinks] == [
         MAHALANOBIS,
         VARIANCE,
-        ML + "c\u0327.md",
+        ML + "\u00e7.md",
     ]
 
 
