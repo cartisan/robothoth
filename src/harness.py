@@ -1,6 +1,5 @@
 """Run vault tool conversations with LangChain chat models."""
 
-import json
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
@@ -232,11 +231,7 @@ def _execute(
                 output = registry.dispatch(
                     name=call.name, arguments_json=call.arguments, vault_path=vault_path
                 )
-                tool_span.update(output=output)
-                if json.loads(s=output).get("ok") is False:
-                    tool_span.update(
-                        level="ERROR", status_message="Tool returned an error"
-                    )
+                tool_span.record_tool_output(output=output)
             call_trace.record_tool_result(index, output)
             messages.append(ToolMessage(content=output, tool_call_id=call.call_id))
 

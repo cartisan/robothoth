@@ -4,6 +4,7 @@ Credentials and the base URL come from the environment, loaded by CLI callers.
 Programmatic callers own environment loading and should call flush before exit.
 """
 
+import json
 import logging
 import os
 from collections.abc import Iterator
@@ -56,6 +57,21 @@ class Observation:
                 self.span.update(**fields)
             except Exception:
                 logger.warning("Langfuse observation update failed")
+
+
+    def record_tool_output(self, output: str) -> None:
+        """Retain exact tool text and mark recognized JSON error envelopes.
+
+        Plain text and other JSON values remain valid tool outputs. Telemetry
+        inspection never imposes a new output contract on the dispatcher.
+        """
+        self.update(output=output)
+        try:
+            envelope = json.loads(s=output)
+        except json.JSONDecodeError:
+            return
+        if isinstance(envelope, dict) and envelope.get("ok") is False:
+            self.update(level="ERROR", status_message="Tool returned an error")
 
 
 @contextmanager
