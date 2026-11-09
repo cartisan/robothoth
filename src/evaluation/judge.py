@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.gold_dataset.validate import AnswerCriteria
+from src.observability import observability_options, observation
 from src.utils import SystemPrompt
 
 CONTENT_PROMPT = SystemPrompt(
@@ -350,53 +351,76 @@ class SemanticJudge:
                 earlier responses, and any failing response are retained. No
                 partial grade is returned, and the original exception is chained.
         """
-        content_payload = self._construct_content_grading_payload(
-            request=request,
-            final_answer=final_answer,
-            answer_criteria=answer_criteria,
-        )
-        calls: list[JudgeCall] = []
-        scores: list[CriterionScore] = []
-        grading_stage = self._stages[0]
-        try:
-            bound = self.model.with_structured_output(
-                schema=JudgeResponseSchema,
-                **self.structured_output_kwargs,
+        with observation(
+            name="judge-grade-answer",
+            kind="judge",
+            input={"request": request, "answer": final_answer},
+        ) as grade_span:
+            content_payload = self._construct_content_grading_payload(
+                request=request,
+                final_answer=final_answer,
+                answer_criteria=answer_criteria,
             )
-            for grading_stage in self._stages:
-                payload = (
-                    content_payload
-                    if grading_stage.name == "content"
-                    else GradingPayload(request=request, final_answer=final_answer)
+            calls: list[JudgeCall] = []
+            scores: list[CriterionScore] = []
+            grading_stage = self._stages[0]
+            try:
+                bound = self.model.with_structured_output(
+                    schema=JudgeResponseSchema,
+                    **self.structured_output_kwargs,
                 )
-                grading_stage.set_payload(payload=payload)
-                # add call without response to record it in case it fails
-                calls.append(JudgeCall(stage=grading_stage.name, raw_response=None))
-                response: Any = bound.invoke(
-                    input=[
-                        SystemMessage(content=grading_stage.prompt.text),
-                        HumanMessage(
-                            content=payload.model_dump_json(exclude_none=True)
-                        ),
-                    ]
-                )
-                # replace last JudgeCall with one where response is filled
-                calls[-1] = JudgeCall(
-                    stage=grading_stage.name, raw_response=response["raw"]
-                )
-                scores.extend(
-                    self._validate_scores(
-                        response=response,
-                        expected_criteria_ids=grading_stage.expected_criteria_ids,
+                for grading_stage in self._stages:
+                    payload = (
+                        content_payload
+                        if grading_stage.name == "content"
+                        else GradingPayload(request=request, final_answer=final_answer)
                     )
-                )
-        except Exception as exc:
-            raise JudgeError(
-                message=str(object=exc),
-                stage=grading_stage.name,
-                judge_calls=tuple(calls),
-            ) from exc
-        return SemanticGrade(scores=tuple(scores), judge_calls=tuple(calls))
+                    grading_stage.set_payload(payload=payload)
+                    # add call without response to record it in case it fails
+                    calls.append(JudgeCall(stage=grading_stage.name, raw_response=None))
+                    with observation(
+                        name=f"judge-grade-stage-{grading_stage.name}",
+                        kind="judge",
+                        input=payload.model_dump(exclude_none=True),
+                        metadata={"prompt_version": grading_stage.prompt.version},
+                    ) as stage_span:
+                        response: Any = bound.invoke(
+                            **observability_options(
+                                name=f"judge-request-stage-{grading_stage.name}"
+                            ),
+                            input=[
+                                SystemMessage(content=grading_stage.prompt.text),
+                                HumanMessage(
+                                    content=payload.model_dump_json(exclude_none=True)
+                                ),
+                            ],
+                        )
+                        # replace last JudgeCall with one where response is filled
+                        calls[-1] = JudgeCall(
+                            stage=grading_stage.name, raw_response=response["raw"]
+                        )
+                        scores.extend(
+                            self._validate_scores(
+                                response=response,
+                                expected_criteria_ids=grading_stage.expected_criteria_ids,
+                            )
+                        )
+                        stage_span.update(
+                            output=[
+                                score.model_dump()
+                                for score in scores
+                                if score.criterion_id
+                                in grading_stage.expected_criteria_ids
+                            ]
+                        )
+            except Exception as exc:
+                raise JudgeError(
+                    message=str(object=exc),
+                    stage=grading_stage.name,
+                    judge_calls=tuple(calls),
+                ) from exc
+            grade_span.update(output=[item.model_dump() for item in scores])
+            return SemanticGrade(scores=tuple(scores), judge_calls=tuple(calls))
 
     def _validate_scores(
         self, response: dict[str, Any], expected_criteria_ids: list[str]

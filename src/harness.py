@@ -13,6 +13,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 
+from src.observability import observability_options, observation
 from src.tools.registry import registry
 from src.tracing import Trace, message_text, message_tool_calls
 from src.utils import SystemPrompt
@@ -90,16 +91,27 @@ def run_in_harness(
     )
     trace = Trace()
     try:
-        return _execute(
-            chat_model=chat_model,
-            user_prompt=user_prompt,
-            vault_path=vault_path,
-            system_prompt=system_prompt,
-            max_api_calls=max_api_calls,
-            model_label=model_label,
-            tool_binding_kwargs=tool_binding_kwargs,
-            trace=trace,
-        )
+        with observation(
+            name="harness-run-query",
+            kind="harness",
+            input=user_prompt,
+            metadata={
+                "system_prompt_version": system_prompt.version,
+                "max_api_calls": max_api_calls,
+            },
+        ) as span:
+            result = _execute(
+                chat_model=chat_model,
+                user_prompt=user_prompt,
+                vault_path=vault_path,
+                system_prompt=system_prompt,
+                max_api_calls=max_api_calls,
+                model_label=model_label,
+                tool_binding_kwargs=tool_binding_kwargs,
+                trace=trace,
+            )
+            span.update(output=result.final_answer)
+            return result
     except Exception as exc:
         raise HarnessError(str(exc), trace) from exc
 
@@ -164,7 +176,9 @@ def _execute(
     for _ in range(max_api_calls):
         started = perf_counter()
         try:
-            response = bound.invoke(input=messages)
+            response = bound.invoke(
+                input=messages, **observability_options(name="harness-request")
+            )
         except Exception:
             trace.record_failure(label, perf_counter() - started)
             raise
@@ -208,9 +222,16 @@ def _execute(
             return HarnessResult(answer, trace)
         messages.append(response)
         for index, call in enumerate(calls):
-            output = registry.dispatch(
-                name=call.name, arguments_json=call.arguments, vault_path=vault_path
-            )
+            with observation(
+                name=f"tool-{call.name}",
+                kind="tool",
+                input=call.arguments,
+                metadata={"call_id": call.call_id},
+            ) as tool_span:
+                output = registry.dispatch(
+                    name=call.name, arguments_json=call.arguments, vault_path=vault_path
+                )
+                tool_span.record_tool_output(output=output)
             call_trace.record_tool_result(index, output)
             messages.append(ToolMessage(content=output, tool_call_id=call.call_id))
 

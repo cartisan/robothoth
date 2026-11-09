@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
 from src.harness import HarnessError, run_in_harness
+from src.observability import flush
 
 VAULT_PATH = str(Path(__file__).resolve().parents[1] / "tests/test_vault")
 EXAMPLE_PROMPT = (
@@ -45,6 +46,8 @@ def _execute(model: BaseChatModel, **kwargs: Any) -> None:
         print(result.final_answer)
         print()
         print(result.trace)
+    finally:
+        flush()
 
 
 def execute_openai() -> None:
