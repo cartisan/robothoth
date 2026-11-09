@@ -1,5 +1,6 @@
 """Run the entire validated gold dataset sequentially and retain every repeat."""
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,9 +36,12 @@ from src.harness import (
     run_in_harness,
     validate_harness_options,
 )
+from src.observability import observation
 from src.utils import SystemPrompt
 
 DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/extended_test_vault"
+
+logger = logging.getLogger(__name__)
 
 
 def _now() -> str:
@@ -144,6 +148,7 @@ def run_evaluation(
         Exception: If default judge configuration fails, or an unexpected error
             escapes the harness or judge interface.
     """
+    logger.info("Starting golden dataset evaluation run...")
     suite_started = perf_counter()
     started = _now()
     dataset = validate_evaluation_inputs(
@@ -201,6 +206,7 @@ def run_evaluation(
     save_report(directory, report)
     for case in dataset.entries:
         for repeat in range(1, repeats + 1):
+            logger.info(f"Evaluating case: {case.id}, repetition: {repeat}")
             repeat_started = perf_counter()
             result: dict[str, Any] = {
                 "case_id": case.id,
@@ -216,49 +222,70 @@ def run_evaluation(
                 "judge_calls": [],
                 "error": None,
             }
-            try:
-                harness_result = run_in_harness(
-                    chat_model=candidate_model,
-                    user_prompt=case.request,
-                    vault_path=str(object=vault_path),
-                    system_prompt=system_prompt,
-                    max_api_calls=max_api_calls,
-                    model_label=model_label,
-                    tool_binding_kwargs=tool_binding_kwargs,
-                )
-            except HarnessError as exc:
-                result["error"] = _error_record(exc=exc)
-                result["trace"] = json_value(value=exc.trace)
-                result["tool_checks"] = json_value(
-                    value=evaluate_tool_checks(
-                        tool_checks=case.tool_checks, trace=exc.trace
-                    )
-                )
-            else:
-                result["final_answer"] = harness_result.final_answer
-                result["trace"] = json_value(harness_result.trace)
-                checks = evaluate_tool_checks(case.tool_checks, harness_result.trace)
-                result["tool_checks"] = json_value(checks)
+            with observation(
+                name="runner-run-evaluation",
+                kind="evaluator",
+                input=case.request,
+                session_id=f"evaluation-{run_id}",
+                metadata={
+                    "case_id": case.id,
+                    "repeat": repeat,
+                    "dataset_version": case.dataset_version,
+                    "run_id": run_id,
+                },
+            ) as repeat_span:
                 try:
-                    grade = evaluator.grade(
-                        request=case.request,
-                        final_answer=harness_result.final_answer,
-                        answer_criteria=case.answer_criteria,
+                    logger.info("   Running harness...")
+                    harness_result = run_in_harness(
+                        chat_model=candidate_model,
+                        user_prompt=case.request,
+                        vault_path=str(object=vault_path),
+                        system_prompt=system_prompt,
+                        max_api_calls=max_api_calls,
+                        model_label=model_label,
+                        tool_binding_kwargs=tool_binding_kwargs,
                     )
-                except JudgeError as exc:
-                    result["status"] = "judge_error"
+                except HarnessError as exc:
                     result["error"] = _error_record(exc=exc)
-                    result["judge_calls"] = json_value(value=exc.judge_calls)
-                else:
-                    result["scores"] = json_value(grade.scores)
-                    result["judge_calls"] = json_value(value=grade.judge_calls)
-                    passed = all(item.passed for item in checks) and all(
-                        item.score >= 4 for item in grade.scores
+                    result["trace"] = json_value(value=exc.trace)
+                    result["tool_checks"] = json_value(
+                        value=evaluate_tool_checks(
+                            tool_checks=case.tool_checks, trace=exc.trace
+                        )
                     )
-                    result["status"] = "passed" if passed else "failed"
-            result["finished_at"] = _now()
-            result["elapsed_seconds"] = perf_counter() - repeat_started
-            result.update(**repeat_token_usage(result=result))
+                else:
+                    result["final_answer"] = harness_result.final_answer
+                    result["trace"] = json_value(harness_result.trace)
+                    checks = evaluate_tool_checks(
+                        case.tool_checks, harness_result.trace
+                    )
+                    result["tool_checks"] = json_value(checks)
+                    try:
+                        logger.info("   Running judge...")
+                        grade = evaluator.grade(
+                            request=case.request,
+                            final_answer=harness_result.final_answer,
+                            answer_criteria=case.answer_criteria,
+                        )
+                    except JudgeError as exc:
+                        result["status"] = "judge_error"
+                        result["error"] = _error_record(exc=exc)
+                        result["judge_calls"] = json_value(value=exc.judge_calls)
+                    else:
+                        result["scores"] = json_value(grade.scores)
+                        result["judge_calls"] = json_value(value=grade.judge_calls)
+                        passed = all(item.passed for item in checks) and all(
+                            item.score >= 4 for item in grade.scores
+                        )
+                        result["status"] = "passed" if passed else "failed"
+                result["finished_at"] = _now()
+                result["elapsed_seconds"] = perf_counter() - repeat_started
+                result.update(**repeat_token_usage(result=result))
+                repeat_span.update(
+                    output=result["final_answer"],
+                    metadata={"outcome": result["status"]},
+                    level="ERROR" if result["error"] else "DEFAULT",
+                )
             report["results"].append(result)
             report["updated_at"] = result["finished_at"]
             report["elapsed_seconds"] = perf_counter() - suite_started

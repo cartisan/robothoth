@@ -8,6 +8,7 @@ dependencies = [
     "langchain-openai>=1.6.7",
     "langchain-anthropic>=1.0.0",
     "pydantic>=2,<3",
+    "langfuse==5.2.0",
 ]
 
 [dependency-groups]

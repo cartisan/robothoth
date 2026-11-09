@@ -16,6 +16,7 @@ from src.evaluation.runner import (
 )
 from src.gold_dataset.validate import _unique_object
 from src.harness import SYSTEM_PROMPT
+from src.observability import flush
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,6 +79,8 @@ def main(argv: list[str] | None = None) -> int:
     except (Exception, KeyboardInterrupt) as exc:
         print(f"Evaluation setup or persistence failed: {exc}", file=sys.stderr)
         return 2
+    finally:
+        flush()
     print(f"Report: {run.run_directory / 'report.json'}")
     print(f"Summary: {run.run_directory / 'summary.md'}")
     return run.exit_code
