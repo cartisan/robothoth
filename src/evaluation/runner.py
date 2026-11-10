@@ -18,6 +18,7 @@ from src.evaluation.judge import (
     SemanticJudge,
 )
 from src.evaluation.reporting import (
+    candidate_identity,
     json_value,
     model_configuration,
     repeat_token_usage,
@@ -36,7 +37,7 @@ from src.harness import (
     run_in_harness,
     validate_harness_options,
 )
-from src.observability import observation
+from src.observability import Experiment
 from src.utils import SystemPrompt
 
 DEFAULT_VAULT_PATH = Path(__file__).resolve().parents[2] / "tests/extended_test_vault"
@@ -204,6 +205,25 @@ def run_evaluation(
         "results": [],
     }
     save_report(directory, report)
+    candidate_name, reasoning_level = candidate_identity(model=candidate_model)
+    experiment = Experiment(
+        run_id=run_id,
+        candidate_model=candidate_name,
+        reasoning_level=reasoning_level,
+        metadata={
+            "run_id": run_id,
+            "dataset_version": report["gold_dataset_version"],
+            "candidate_prompt_version": system_prompt.version,
+            "judge_prompt_versions": {
+                "content": CONTENT_PROMPT.version,
+                "concision": CONCISION_PROMPT.version,
+                "task_usefulness": TASK_USEFULNESS_PROMPT.version,
+            },
+            "candidate_config": report["candidate_config"],
+            "judge_config": report["judge_config"],
+            "judge_structured_output_kwargs": report["judge_structured_output_kwargs"],
+        },
+    )
     for case in dataset.entries:
         for repeat in range(1, repeats + 1):
             logger.info(f"Evaluating case: {case.id}, repetition: {repeat}")
@@ -222,11 +242,10 @@ def run_evaluation(
                 "judge_calls": [],
                 "error": None,
             }
-            with observation(
-                name="runner-run-evaluation",
-                kind="evaluator",
+            with experiment.item(
+                case_id=case.id,
+                repeat=repeat,
                 input=case.request,
-                session_id=f"evaluation-{run_id}",
                 metadata={
                     "case_id": case.id,
                     "repeat": repeat,
@@ -278,6 +297,31 @@ def run_evaluation(
                             item.score >= 4 for item in grade.scores
                         )
                         result["status"] = "passed" if passed else "failed"
+                for score in result["scores"]:
+                    repeat_span.score(
+                        name=f"semantic.{score['criterion_id']}",
+                        value=score["score"],
+                        data_type="NUMERIC",
+                        comment=score["explanation"],
+                    )
+                for check in result["tool_checks"]:
+                    repeat_span.score(
+                        name=f"tool.{check['criterion_id']}",
+                        value=int(check["passed"]),
+                        data_type="BOOLEAN",
+                        comment=check["explanation"],
+                    )
+                repeat_span.score(
+                    name="evaluation.outcome",
+                    value=result["status"],
+                    data_type="CATEGORICAL",
+                )
+                if result["status"] in {"passed", "failed"}:
+                    repeat_span.score(
+                        name="evaluation.passed",
+                        value=int(result["status"] == "passed"),
+                        data_type="BOOLEAN",
+                    )
                 result["finished_at"] = _now()
                 result["elapsed_seconds"] = perf_counter() - repeat_started
                 result.update(**repeat_token_usage(result=result))
@@ -292,4 +336,7 @@ def run_evaluation(
             if len(report["results"]) == report["expected_repeats"]:
                 report["finished_at"] = result["finished_at"]
             save_report(directory, report)
+    for name in ("pass_rate", "passed", "failed", "harness_errors", "judge_errors"):
+        if (value := report["summary"][name]) is not None:
+            experiment.score(name=name, value=value)
     return EvaluationRun(directory, report)

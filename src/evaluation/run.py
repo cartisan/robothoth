@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -27,6 +28,10 @@ def main(argv: list[str] | None = None) -> int:
     CLI overrides cover the entire dataset, vault, repeat count, invocation limit,
     and report directory; case selection and version filtering are absent.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = argparse.ArgumentParser(description="Evaluate every gold dataset case")
     parser.add_argument("--config", type=Path, help="independent model settings JSON")
     parser.add_argument("--dataset-path", type=Path, help="default: bundled dataset")
