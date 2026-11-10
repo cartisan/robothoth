@@ -93,7 +93,7 @@ def run_in_harness(
     try:
         with observation(
             name="harness-run-query",
-            kind="harness",
+            kind="agent",
             input=user_prompt,
             metadata={
                 "system_prompt_version": system_prompt.version,

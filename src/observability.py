@@ -77,7 +77,7 @@ class Observation:
 @contextmanager
 def observation(
     name: str,
-    kind: Literal["span", "harness", "tool", "evaluator", "judge"] = "span",
+    kind: Literal["span", "agent", "tool", "evaluator"] = "span",
     input: Any = None,
     metadata: dict[str, Any] | None = None,
     session_id: str | None = None,
@@ -87,14 +87,6 @@ def observation(
     Capture only supplied fields. Exceptions are marked by type to avoid leaking
     filesystem paths or credentials through exception messages and tracebacks.
     """
-    # Application roles map to Langfuse's supported observation types.
-    sdk_kind: Literal["span", "agent", "tool", "evaluator"]
-    if kind == "harness":
-        sdk_kind = "agent"
-    elif kind == "judge":
-        sdk_kind = "evaluator"
-    else:
-        sdk_kind = kind
     stack = ExitStack()
     record = Observation()
     sdk = client()
@@ -110,7 +102,7 @@ def observation(
                 span=stack.enter_context(
                     sdk.start_as_current_observation(
                         name=name,
-                        as_type=sdk_kind,
+                        as_type=kind,
                         input=input,
                         metadata=metadata,
                     )
