@@ -353,7 +353,7 @@ class SemanticJudge:
         """
         with observation(
             name="judge-grade-answer",
-            kind="judge",
+            kind="evaluator",
             input={"request": request, "answer": final_answer},
         ) as grade_span:
             content_payload = self._construct_content_grading_payload(
@@ -380,7 +380,7 @@ class SemanticJudge:
                     calls.append(JudgeCall(stage=grading_stage.name, raw_response=None))
                     with observation(
                         name=f"judge-grade-stage-{grading_stage.name}",
-                        kind="judge",
+                        kind="evaluator",
                         input=payload.model_dump(exclude_none=True),
                         metadata={"prompt_version": grading_stage.prompt.version},
                     ) as stage_span:
