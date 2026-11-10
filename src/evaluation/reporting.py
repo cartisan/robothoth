@@ -101,6 +101,28 @@ def model_configuration(model: BaseChatModel) -> dict[str, Any]:
     }
 
 
+def candidate_identity(model: BaseChatModel) -> tuple[str, str]:
+    """Return the configured candidate model name and reasoning level for telemetry.
+
+    Read credential-filtered serialized model fields. OpenAI's reasoning.effort
+    takes precedence over reasoning_effort; Anthropic's reasoning_effort takes
+    precedence over output_config.effort. Missing effort is labeled default,
+    preserving explicit none and never inferring levels from thinking budgets.
+    Custom models without a model/model_name field use their class name.
+    """
+    settings = model_configuration(model=model)["settings"]
+    name = settings.get("model") or settings.get("model_name") or type(model).__name__
+    reasoning = settings.get("reasoning") or {}
+    output_config = settings.get("output_config") or {}
+    effort = (
+        reasoning.get("effort")
+        or settings.get("reasoning_effort")
+        or output_config.get("effort")
+        or "default"
+    )
+    return name, effort
+
+
 def _sum_tokens(records: list[dict[str, Any]], field: str) -> int | None:
     """Return summed token counts, or None if any count is unknown.
 

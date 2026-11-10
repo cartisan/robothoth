@@ -67,7 +67,7 @@ class EvaluationConfig(BaseModel):
         default_factory=lambda: CandidateConfig(
             provider="openai",
             model="gpt-6-luna",
-            settings={"reasoning_effort": "medium", "use_responses_api": True},
+            settings={"reasoning_effort": "low", "use_responses_api": True},
             tool_binding_kwargs={"strict": True},
         )
     )

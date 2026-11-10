@@ -326,14 +326,14 @@ def test_default_judge_model_configuration(monkeypatch: pytest.MonkeyPatch) -> N
     assert judge.model.use_responses_api is True  # type: ignore[attr-defined]
 
 
-def test_default_candidate_uses_medium_reasoning(
+def test_default_candidate_uses_low_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv(name="OPENAI_API_KEY", value="test")
     config = EvaluationConfig().candidate
     candidate = config.create_model()
-    assert config.settings["reasoning_effort"] == "medium"
-    assert candidate.reasoning_effort == "medium"  # type: ignore[attr-defined]
+    assert config.settings["reasoning_effort"] == "low"
+    assert candidate.reasoning_effort == "low"  # type: ignore[attr-defined]
     assert candidate.use_responses_api is True  # type: ignore[attr-defined]
 
 
