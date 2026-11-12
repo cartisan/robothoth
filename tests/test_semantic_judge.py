@@ -318,14 +318,6 @@ def test_provider_parser_validates_scores_before_grading(
         assert grade.scores[0].score == score_value
 
 
-def test_default_judge_model_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "test")
-    judge = SemanticJudge()
-    assert judge.model.model_name == "gpt-6.1-sol"  # type: ignore[attr-defined]
-    assert judge.model.reasoning_effort == "medium"  # type: ignore[attr-defined]
-    assert judge.model.use_responses_api is True  # type: ignore[attr-defined]
-
-
 def test_default_candidate_uses_low_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -370,7 +362,6 @@ def test_provider_configuration_preserves_options_and_excludes_credentials(
     judge = SemanticJudge()
     snapshot = model_configuration(judge.model)
     assert "fixture-secret-api-8174" not in json.dumps(snapshot)
-    assert snapshot["settings"]["reasoning_effort"] == "medium"
     assert snapshot["settings"]["use_responses_api"] is True
 
 

@@ -206,7 +206,7 @@ class JudgeError(RuntimeError):
 class SemanticJudge:
     """Grade answer criteria using an independently configured chat model.
 
-    The default model is gpt-6.1-sol with medium reasoning, the Responses API,
+    The default model is gpt-6.1-terra with high reasoning, the Responses API,
     and strict native structured output. Other LangChain models, including
     Claude, may be supplied with their provider-specific structured output options.
     """
@@ -238,8 +238,8 @@ class SemanticJudge:
             model
             if model is not None
             else ChatOpenAI(
-                model="gpt-6.1-sol",
-                reasoning_effort="medium",
+                model="gpt-6.1-terra",
+                reasoning_effort="high",
                 use_responses_api=True,
             )
         )

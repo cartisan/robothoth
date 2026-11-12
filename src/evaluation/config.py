@@ -74,7 +74,7 @@ class EvaluationConfig(BaseModel):
     judge: JudgeConfig = Field(
         default_factory=lambda: JudgeConfig(
             provider="openai",
-            model="gpt-6.1-sol",
-            settings={"reasoning_effort": "medium", "use_responses_api": True},
+            model="gpt-6.1-terra",
+            settings={"reasoning_effort": "high", "use_responses_api": True},
         )
     )

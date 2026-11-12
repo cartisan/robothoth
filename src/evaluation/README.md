@@ -43,9 +43,9 @@ Stages are mutable and reused across answers; calls on one judge must be sequent
 
 ## Model configuration
 
-The default candidate is OpenAI `gpt-6-luna`; the judge is OpenAI `gpt-6.1-sol`.
-Both use medium reasoning and the Responses API. The judge defaults to strict
-native JSON-schema output.
+The default candidate is OpenAI `gpt-6-luna` with low reasoning; the judge is
+OpenAI `gpt-6.1-terra` with high reasoning. Both use the Responses API. The judge
+defaults to strict native JSON-schema output.
 
 An optional config file selects each model independently:
 
