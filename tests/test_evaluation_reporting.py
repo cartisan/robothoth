@@ -32,7 +32,7 @@ def render_repeat(result: dict[str, Any]) -> str:
     return summary_markdown(report=report)
 
 
-def test_summary_explains_every_check_and_judge_criterion() -> None:
+def test_summary_explains_every_check_and_judge_rubric() -> None:
     explanation = (
         "The answer covers the main idea | but omits escalation.\n"
         "A different phrasing would be fine. <Missing essential content>"
@@ -48,7 +48,7 @@ def test_summary_explains_every_check_and_judge_criterion() -> None:
             "total_tokens": 150,
             "tool_checks": [
                 {
-                    "criterion_id": "required_tools[0]",
+                    "check_id": "required_tools[0]",
                     "passed": True,
                     "explanation": "Found successful list_notes call.",
                     "calls": [
@@ -65,7 +65,7 @@ def test_summary_explains_every_check_and_judge_criterion() -> None:
                     ],
                 },
                 {
-                    "criterion_id": "required_note_reads[0]",
+                    "check_id": "required_note_reads[0]",
                     "passed": False,
                     "explanation": "Missing successful read of area/Note.md.",
                     "calls": [],
@@ -73,17 +73,17 @@ def test_summary_explains_every_check_and_judge_criterion() -> None:
             ],
             "scores": [
                 {
-                    "criterion_id": "ideal_answer",
+                    "rubric": "content",
                     "score": 3,
                     "explanation": explanation,
                 },
                 {
-                    "criterion_id": "quality.concision",
+                    "rubric": "concision",
                     "score": 4,
                     "explanation": "The answer is concise.",
                 },
                 {
-                    "criterion_id": "quality.task_usefulness",
+                    "rubric": "task_usefulness",
                     "score": 5,
                     "explanation": "Directly usable.",
                 },
@@ -103,9 +103,9 @@ def test_summary_explains_every_check_and_judge_criterion() -> None:
         "| required_note_reads[0] | failed | "
         "Missing successful read of area/Note.md. | None |"
     ) in summary
-    assert "| ideal_answer | 3 / 5 | failed |" in summary
-    assert "| quality.concision | 4 / 5 | passed | The answer is concise. |" in summary
-    assert "| quality.task_usefulness | 5 / 5 | passed | Directly usable. |" in summary
+    assert "| content | 3 / 5 | failed |" in summary
+    assert "| concision | 4 / 5 | passed | The answer is concise. |" in summary
+    assert "| task_usefulness | 5 / 5 | passed | Directly usable. |" in summary
     assert (
         "The answer covers the main idea \\| but omits escalation.<br>"
         "A different phrasing would be fine. &lt;Missing essential content&gt;"
@@ -125,7 +125,7 @@ def test_summary_explains_every_check_and_judge_criterion() -> None:
         (
             "judge_error",
             "JudgeError",
-            "Duplicate criterion IDs",
+            "Duplicate rubrics",
             None,
             "No valid judge ratings available.",
         ),
@@ -152,7 +152,7 @@ def test_summary_distinguishes_errors_from_scored_failures(
     assert unavailable in summary
     assert f"Error: {error_type}: {message}" in summary
     assert "Pass rate: 0 / 0 (null)" in summary
-    assert "| Criterion |" not in summary
+    assert "| Rubric |" not in summary
     if cause:
         assert "Caused by: ConnectionError: Provider unavailable" in summary
 

@@ -264,7 +264,7 @@ def _time_text(seconds: float) -> str:
 def _repeat_markdown(result: dict[str, Any]) -> list[str]:
     """Return one repeat's status, trace checks, judge ratings, and available errors.
 
-    Every tool check and semantic criterion includes its full explanation.
+    Every tool check and semantic rubric includes its full explanation.
     Judge scores of at least 4 pass. Empty checks and unavailable grades are
     explicit, and errors include any chained original failure.
     Cost includes candidate and judge tokens; elapsed time includes tools and
@@ -296,7 +296,7 @@ def _repeat_markdown(result: dict[str, Any]) -> list[str]:
                     f"tool {reference['tool_index'] + 1} ({reference['call_id']})"
                 )
             lines += [
-                f"| {_table_text(text=check['criterion_id'])} | {status} | "
+                f"| {_table_text(text=check['check_id'])} | {status} | "
                 f"{_table_text(text=check['explanation'])} | "
                 f"{_table_text(text=evidence) if evidence else 'None'} |"
             ]
@@ -305,13 +305,13 @@ def _repeat_markdown(result: dict[str, Any]) -> list[str]:
     lines += ["", "Judge ratings (passing score: 4 or 5):", ""]
     if result["scores"]:
         lines += [
-            "| Criterion | Score | Result | Explanation |",
+            "| Rubric | Score | Result | Explanation |",
             "| --- | --- | --- | --- |",
         ]
         for score in result["scores"]:
             status = "passed" if score["score"] >= 4 else "failed"
             lines += [
-                f"| {_table_text(text=score['criterion_id'])} | "
+                f"| {_table_text(text=score['rubric'])} | "
                 f"{score['score']} / 5 | {status} | "
                 f"{_table_text(text=score['explanation'])} |"
             ]

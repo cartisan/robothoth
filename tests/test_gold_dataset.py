@@ -42,59 +42,24 @@ def write_dataset(
     )
 
 
-@pytest.mark.parametrize(
-    "answer_criteria",
-    [
-        {"ideal_answer": "An answer"},
-        {"additional_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "additional_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "additional_criteria": []},
-        {"ideal_answer": None, "additional_criteria": ["Names the note"]},
-        {"ideal_answer": "An answer", "additional_criteria": None},
-    ],
-)
-def test_answer_criteria_accepts_usable_combinations(
-    answer_criteria: dict[str, object],
-) -> None:
-    assert GoldEntry.model_validate(
-        obj=entry(answer_criteria=answer_criteria)
-    ).answer_criteria
+@pytest.mark.parametrize("value", ["An answer", " Reference "])
+def test_answer_criteria_requires_nonblank_reference(value: str) -> None:
+    assert AnswerCriteria(ideal_answer=value).ideal_answer == value
 
 
 @pytest.mark.parametrize(
-    "answer_criteria",
+    "value",
     [
         {},
         {"ideal_answer": None},
-        {"additional_criteria": []},
-        {"ideal_answer": None, "additional_criteria": None},
-    ],
-)
-def test_answer_criteria_requires_a_criterion(
-    answer_criteria: dict[str, object],
-) -> None:
-    with pytest.raises(ValidationError):
-        AnswerCriteria.model_validate(obj=answer_criteria)
-
-
-@pytest.mark.parametrize(
-    "answer_criteria",
-    [
-        {"ideal_answer": "  "},
-        {"additional_criteria": ["  "]},
-        {"ideal_answer": "Valid", "additional_criteria": ["  "]},
-        {"ideal_answer": "Valid", "additional_criteria": [], "extra": "no"},
+        {"ideal_answer": " "},
         {"ideal_answer": 2},
-        {"additional_criteria": "criterion"},
-        {"additional_criteria": ("criterion",)},
-        {"additional_criteria": [1]},
+        {"ideal_answer": "Valid", "extra": []},
     ],
 )
-def test_answer_criteria_rejects_invalid_supplied_fields(
-    answer_criteria: dict[str, object],
-) -> None:
+def test_answer_criteria_rejects_invalid_supplied_fields(value: dict) -> None:
     with pytest.raises(ValidationError):
-        AnswerCriteria.model_validate(obj=answer_criteria)
+        AnswerCriteria.model_validate(obj=value)
 
 
 @pytest.mark.parametrize(

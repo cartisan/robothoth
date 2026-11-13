@@ -1,29 +1,25 @@
 # Gold dataset
 
 `dataset.json` is the manually maintained source of evaluation cases. Its
-`schema_version` is `2`; this is metadata and does not select validation rules.
+`schema_version` is `3`; this is metadata and does not select validation rules.
 Unknown fields and type coercion are rejected.
 
 Each entry requires a unique nonblank `id`, `request`, `added_reason`, positive
 integer `dataset_version`, `answer_criteria`, and `tool_checks`. The
-`answer_criteria` object requires an `ideal_answer`, nonempty
-`additional_criteria`, or both. Supplied answers and criteria must be nonblank;
-when both are present, all criteria apply.
+`answer_criteria` object requires a nonblank `ideal_answer`.
 
 ```json
 {
   "answer_criteria": {
-    "ideal_answer": "The reference answer.",
-    "additional_criteria": ["Preserves the source caveat."]
+    "ideal_answer": "The reference answer."
   }
 }
 ```
 
-Use ideal answers for correctness and essential coverage. Keep case-specific
-criteria focused on critical exclusions and source caveats. Shared concision and
-task-usefulness rubrics belong in the [judge](../evaluation/README.md#scoring).
-Base criteria on the vault snapshot and its caveats, independently of candidate
-performance.
+Use ideal answers for correctness, essential coverage, exclusions and source
+caveats. Shared concision and task-usefulness rubrics belong in the
+[judge](../evaluation/README.md#scoring). Base references on the vault snapshot
+and its caveats, independently of candidate performance.
 
 ## Tool checks
 

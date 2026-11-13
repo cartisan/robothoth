@@ -150,14 +150,10 @@ def test_migrated_dataset_criteria() -> None:
     search, multi, synthesis = load_dataset(version=1)
     assert search.tool_checks.required_tools == ["list_notes"]
     assert search.tool_checks.allowed_tools == ["list_notes"]
-    assert (
-        search.answer_criteria.ideal_answer
-        and not search.answer_criteria.additional_criteria
-    )
+    assert search.answer_criteria.ideal_answer
     assert multi.tool_checks.required_tools == ["list_notes", "read_note"]
     assert multi.answer_criteria.ideal_answer
     assert synthesis.answer_criteria.ideal_answer
-    assert not synthesis.answer_criteria.additional_criteria
     assert synthesis.tool_checks.required_note_reads == [
         "2 areas/ai engineering/evaluation/Rubric Based Evaluation.md",
         "2 areas/ai engineering/evaluation/LLM-as-a-Judge.md",
