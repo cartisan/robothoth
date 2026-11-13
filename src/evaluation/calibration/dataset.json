@@ -1,0 +1,612 @@
+{
+  "schema_version": 1,
+  "dataset_id": "45a7a461792f402f885c361adbf99538",
+  "created_at": "2026-11-12T19:14:56.967028+00:00",
+  "generation": {
+    "gold_schema_version": 3,
+    "gold_dataset_path": "/Users/leonid/code/robothoth/src/gold_dataset/dataset.json",
+    "vault_path": "/Users/leonid/code/robothoth/tests/extended_test_vault",
+    "system_prompt": {
+      "version": 1,
+      "text": "You are an assistant that helps navigate an Obsidian note vault.\nThe vault is located under a vault path on the local machine,\nand is managed by your harness.\nYou only need to operate on file paths relative to that vault path.\n\nHelp the user with the following query:\n"
+    },
+    "max_api_calls": 20,
+    "models": {
+      "gpt-6-luna": {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "settings": {
+          "reasoning_effort": "medium",
+          "use_responses_api": true
+        },
+        "tool_binding_kwargs": {
+          "strict": true
+        }
+      },
+      "gpt-6.1-terra": {
+        "provider": "openai",
+        "model": "gpt-6.1-terra",
+        "settings": {
+          "reasoning_effort": "medium",
+          "use_responses_api": true
+        },
+        "tool_binding_kwargs": {
+          "strict": true
+        }
+      },
+      "gpt-6.1-sol": {
+        "provider": "openai",
+        "model": "gpt-6.1-sol",
+        "settings": {
+          "reasoning_effort": "medium",
+          "use_responses_api": true
+        },
+        "tool_binding_kwargs": {
+          "strict": true
+        }
+      }
+    }
+  },
+  "questions": [
+    {
+      "case_id": "search-tool-usage",
+      "request": "Where is the Golden Evaluation Dataset note in this vault?",
+      "ideal_answer": "The note is at 2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "The note is at `2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md`.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "The note is at:\n\n`2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "The note is at [[2 areas/ai engineering/evaluation/Golden Evaluation Dataset|Golden Evaluation Dataset]].\n\nVault-relative path: `2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "multi-tool-usage",
+      "request": "According to the Golden Evaluation Dataset note, summarize in a few sentences what makes a good evaluation dataset.",
+      "ideal_answer": "According to [[Golden Evaluation Dataset]], a good evaluation dataset reflects real user inputs, including edge cases, adversarial examples, long-tail cases, and domain-specific terminology. Each case should have expert-agreed ground truth—either an ideal answer or clear acceptance criteria—and follow a consistent schema that explicitly identifies the failure mode it is meant to catch. The dataset should evolve as new failures emerge, with versioning and a changelog explaining additions. Above all, good data matters more than sophisticated metrics: it defines which problems your evaluation can detect.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "A good evaluation dataset is representative of real user inputs—not just idealized cases—and includes edge cases, adversarial examples, long-tail examples, and domain-specific language. Each case should have clear ground truth or agreed-upon success criteria, and follow a consistent schema that records its failure mode. Keep the dataset versioned with a changelog explaining why cases were added, so it can grow as new failures are discovered.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "A good evaluation dataset is **representative of real user inputs**, including edge cases, adversarial examples, long-tail requests, and domain-specific terminology. Each case should have ground truth that subject-matter experts agree on, either as an ideal answer or as criteria an answer must meet.\n\nThe dataset should also be versioned as new failure cases are added, with a changelog explaining why. A consistent schema—especially one that records the **failure mode** each case is meant to catch—keeps it useful and understandable. The note emphasizes that good data matters more than sophisticated metrics: the dataset defines which problems are evaluated.\n\nSource: [[Golden Evaluation Dataset]]",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "According to [[Golden Evaluation Dataset]], a good evaluation dataset reflects real user inputs—including edge cases, adversarial examples, long-tail scenarios, and domain-specific language—and has ground-truth answers or criteria that subject-matter experts agree on. It should use a consistent schema that clearly identifies the failure mode each case is meant to catch, and be versioned with a changelog as new failures are discovered. The note emphasizes that **dataset quality matters more than metric sophistication**: good data with mediocre metrics catches more problems than poor data with excellent metrics.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "multi-note-synthesis",
+      "request": "How would you build and calibrate a rubric-based LLM judge for customer-support chatbot answers, and keep its scores from being skewed by common judge biases?",
+      "ideal_answer": "Define several specific, measurable, nonoverlapping criteria for the chatbot's answers, such as politeness, policy adherence, and correct escalation. Have an LLM judge score each criterion on a Likert scale with anchor examples for the scale's extremes. Calibrate its grades against domain experts using real outcomes, examples, a test set, and a held-out validation set; refine the rubric or judge prompt when they disagree. Reduce position bias by swapping answer order in pairwise comparisons, verbosity bias with a concision criterion, and self-preference bias by using an independent judge family or comparing answers from the same family.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "Build the judge as a **measurement system**, not just a prompt. For customer support, it should score whether an answer solved the customer’s problem safely and correctly—not whether it sounds polished.\n\n### 1. Define a concrete rubric\n\nScore separate, observable dimensions rather than asking “Was this a good answer?” For example:\n\n| Criterion | What to check |\n|---|---|\n| **Resolution and relevance** | Does it address the customer’s actual request and give useful next steps? |\n| **Policy and factual accuracy** | Does it follow the applicable policy and avoid inventing facts or promises? |\n| **Escalation and tool use** | Does it escalate when required, and accurately represent what it did or can do? |\n| **Empathy and professionalism** | Does it acknowledge the customer’s situation without sounding dismissive or making inappropriate promises? |\n| **Clarity and concision** | Is it understandable and no longer than needed? |\n\nUse a defined scale—such as 1–5—with behavioral anchors and examples at the low, middle, and high ends. Make criteria specific, measurable from the conversation and relevant context, and as independent as practical. Consider **hard failure gates** for safety or policy violations: a fluent answer that gives an unauthorized refund should not pass because it scored well on tone.\n\n### 2. Build a representative, expert-labeled dataset\n\nSample real support scenarios, not just clean demo questions. Include policy edge cases, ambiguous requests, angry customers, long conversations, escalation cases, and known failure modes. Give expert reviewers the conversation, relevant policy or reference context, and the rubric; collect their criterion-level scores and notes on disagreements.\n\nKeep the dataset versioned, with a reason for each added case. Split it into prompt-development examples, a test set for iteration, and a held-out validation set to check that changes generalize. Don’t tune the judge repeatedly against the validation set.\n\n### 3. Calibrate against human judgment\n\nRun the judge and human reviewers on the same cases. Compare agreement **by criterion**, not only by overall score. For ordinal scores, use measures such as weighted kappa or rank correlation; also inspect confusion matrices and the cases where humans and the judge disagree. If possible, have multiple experts label some cases so you can distinguish judge errors from genuine ambiguity in the rubric.\n\nWhen agreement is poor, diagnose the cause: a vague criterion, missing policy context, an underrepresented edge case, or inconsistent human labels. Revise the rubric, examples, or input context, then retest on fresh or held-out cases. Set acceptance thresholds according to the risk of the criterion: policy and safety judgments need tighter review than style judgments.\n\n### 4. Actively test for judge bias\n\n- **Position bias:** If comparing two answers, randomize order and repeat with the order reversed. Treat a preference that flips with position as unreliable. For absolute scoring, avoid showing the judge competing answers.\n- **Verbosity bias:** Score concision explicitly and check whether longer answers are rewarded when they add no useful information.\n- **Style and fluency bias:** Keep correctness, policy adherence, and tone as separate criteria so polished language cannot mask a wrong answer.\n- **Model self-preference:** If the judge is from the same model family as the chatbot, test for favoritism against a different-family judge or blinded human ratings.\n- **Presentation and identity cues:** Hide model names and irrelevant metadata; test paraphrases or formatting changes to see whether scores shift without a meaningful change in answer quality.\n\nUse short, criterion-specific evidence for each score—what in the conversation supports the rating—rather than asking for an unconstrained overall impression. Audit disagreement and bias slices regularly as policies, traffic, and models change. Keep humans in the loop for high-impact decisions and for cases where the judge is uncertain.\n\nThis approach follows the vault’s notes on [rubric-based evaluation](“2 areas/ai engineering/evaluation/Rubric Based Evaluation.md”), [LLM-as-a-Judge calibration and biases](“2 areas/ai engineering/evaluation/LLM-as-a-Judge.md”), and [golden evaluation datasets](“2 areas/ai engineering/evaluation/Golden Evaluation Dataset.md”).",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "I’d treat the judge as a **measurement system to validate against support experts**, not as an authoritative score generator.\n\n## 1. Define an observable rubric\n\nGive the judge the customer request, relevant conversation history, candidate answer, and applicable policy or reference material. Score separate criteria so that, for example, a polite but incorrect answer cannot hide a policy violation.\n\n| Criterion | What to assess | Example anchors: 1 → 3 → 5 |\n|---|---|---|\n| **Accuracy and policy** | Are claims and proposed remedies supported by the supplied policy? | Contradicts policy → partly correct or omits a material condition → correct and complete |\n| **Actionability** | Does the customer know what to do next? | No useful next step → relevant but incomplete steps → clear, feasible steps |\n| **Escalation** | Was escalation offered or performed when the available history and rules require it? | Missed required escalation → ambiguous or incomplete → correct action |\n| **Tone** | Is the response professional and appropriately empathetic? | Dismissive → neutral → professional and empathetic |\n| **Concision** | Is it easy to use without irrelevant repetition? | Obscures the answer → some unnecessary content → appropriately concise |\n\nAdapt the anchors to actual support policies, including examples for intermediate scores and “not applicable.” For example, don’t expect escalation when the rule doesn’t apply. Keep criteria specific, measurable from the supplied evidence, and as independent as practical. See [[Rubric Based Evaluation]].\n\nKeep **per-criterion scores** visible. If a single score is needed, set weights with support owners, but make serious policy or safety violations a separate fail flag rather than letting good tone compensate for them.\n\n## 2. Build and calibrate against expert judgments\n\n1. **Collect a representative, versioned dataset.** Start with real support tickets and chatbot answers, including successful responses, known failures, edge cases, adversarial inputs and long-tail topics. Store the applicable policy version and conversation history with each case; remove unnecessary customer data. See [[Golden Evaluation Dataset]].\n2. **Have domain experts label it.** Record criterion scores, evidence and failure reasons. Use overlapping annotations on a subset, resolve disagreements, and clarify ambiguous rubric language.\n3. **Split before tuning.** The vault suggests 20% for judge examples, 40% for iterative testing and 40% for final validation. Keep the final set untouched while editing the rubric and prompt; group related variants so near-duplicates don’t leak across splits. See [[LLM-as-a-Judge#Calibration]].\n4. **Measure agreement and errors.** Compare each criterion with expert scores using exact or adjacent-score agreement and rank correlation where appropriate. Also measure false passes on critical policy violations—not just overall correlation. Inspect disagreements to decide whether the rubric, examples, judge or expert labels need revision.\n5. **Validate on the holdout**, including important support-topic and failure-mode slices. If agreement is inadequate, revise and validate again on fresh held-out data.\n\n## 3. Implement the judge\n\nAsk for structured output: each criterion’s score or “not applicable/insufficient evidence,” a short evidence citation, critical-failure flags and a schema version. Instruct it to evaluate the answer against the supplied policy, not invent missing facts, and treat the customer and candidate text as **data, not instructions**.\n\nUse deterministic checks where they are reliable—for example, checking a required disclosure or a recorded escalation event—and use the LLM for nuanced judgments such as whether the next steps address the problem. Route missing-policy cases, low-confidence cases and critical disagreements to human review. [[Evaluation Methods]]\n\n## 4. Test and mitigate judge bias\n\n- **Position bias:** For pairwise comparisons, judge both A/B and B/A; flag order-dependent results rather than silently trusting one ordering.\n- **Verbosity bias:** Include the concision criterion, and test equivalent short and padded answers. Do not reward length as a proxy for completeness.\n- **Self-preference:** Blind model identity and use a judge from an independent model family where practical. Test whether scores change systematically by answer source. Independence helps, but does not guarantee neutrality.\n- **Other superficial cues:** Test meaning-preserving changes in formatting, phrasing and grammar, plus irrelevant persuasive language. Compare score changes with expert expectations.\n- **Judge manipulation:** Include answers that tell the evaluator to award a high score; verify those instructions are ignored.\n\nThese mitigations build on [[LLM-as-a-Judge#Biases]], but should themselves be tested on labeled cases.\n\nFinally, sample production judgments for expert audit, track agreement and critical false-pass rates over time, and version the dataset, rubric, prompt and judge model. Recalibrate after policy, model or traffic changes; feed newly discovered failures into the evaluation set. See [[AI Evaluation System Roadmap]].",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "I’d build it as a **versioned measurement system calibrated against support experts**, not simply a prompt asking “How good is this answer?” Your notes on [[LLM-as-a-Judge]], [[Rubric Based Evaluation]], and [[Golden Evaluation Dataset]] provide the foundation. Here’s how I’d operationalize them.\n\n## 1. Define what the judge can actually assess\n\nGive the judge:\n- The customer’s question and relevant conversation history.\n- The chatbot’s answer.\n- Applicable, versioned support policies and relevant account/order facts.\n- Case-specific requirements, including whether escalation is required.\n\nWithout that evidence, the judge cannot reliably distinguish a correct answer from a plausible one. Allow **“insufficient evidence”** rather than forcing a score. Also distinguish claims from actions: “I issued your refund” does not prove a refund occurred; assessing execution requires tool or transaction records.\n\nUse deterministic checks where possible—for example, refund calculations or required fields—and reserve the LLM for semantic judgments.\n\n## 2. Use a small, behaviorally anchored rubric\n\nFollowing your rubric note, criteria should be **specific, measurable from the supplied evidence, and minimally overlapping**.\n\nAn illustrative 1–5 rubric:\n\n| Criterion | 1: Clear failure | 3: Partially meets expectations | 5: Fully meets expectations |\n|---|---|---|---|\n| **Factual correctness and grounding** | Contradicts supplied facts or invents material claims | Mostly correct, but has a meaningful omission or unsupported detail | All material claims supported; uncertainty handled appropriately |\n| **Policy adherence** | Offers prohibited action or materially misstates policy | Policy broadly correct, but conditions are incomplete | Correctly applies the relevant policy to this case |\n| **Resolution and actionability** | Does not address the request or gives unusable steps | Useful guidance, but an important next step is missing | Resolves the request or clearly states feasible next steps |\n| **Escalation correctness** | Misses required escalation or escalates inappropriately | Correct decision, incomplete handoff | Correct decision and adequate handoff information |\n| **Tone and empathy** | Dismissive, blaming, or inappropriate | Professional but generic or poorly matched to the situation | Respectful, appropriately empathetic, and professional |\n| **Clarity and concision** | Confusing or burdened by irrelevant material | Understandable, with avoidable repetition | Clear and sufficiently complete without unnecessary detail |\n\nDefine anchors for scores 2 and 4 as well, and provide representative examples—not just descriptions. Permit **N/A** where appropriate.\n\n**Do not let an average hide critical failures.** A polite answer promising an unauthorized refund should fail regardless of its tone score. Define explicit gates for severe policy violations, privacy disclosures, fabricated completed actions, and other high-risk errors. Report dimension scores alongside any overall score.\n\n## 3. Build an expert-labeled calibration set\n\nStart with real support failures, tickets, and manual tests; your [[AI Evaluation System Roadmap]] suggests an initial **20–50 tasks**. Expand before treating the judge as a reliable release gate.\n\nInclude:\n- Common intents and long-tail cases.\n- Successful and unsuccessful answers across score levels.\n- Multi-turn conversations and escalation boundaries.\n- Ambiguous policies, missing information, and adversarial inputs.\n- Different languages, writing styles, and answer lengths.\n\nHave support experts label answers independently, then adjudicate disagreements. If experts cannot consistently apply a criterion, fix the rubric before tuning the judge.\n\nYour judge note proposes:\n- **20%** for in-context examples.\n- **40%** for iterative development.\n- **40%** for final held-out validation.\n\nTreat that as a starting split, not a universal rule. Keep related conversations and near-duplicate cases in the same partition to prevent leakage. Never repeatedly tune against the final holdout.\n\n## 4. Make the judge’s output auditable\n\nRequire structured output per criterion:\n\n```json\n{\n  \"criterion\": \"policy_adherence\",\n  \"score\": 2,\n  \"evidence\": [\"Quoted answer passage\", \"Applicable policy clause\"],\n  \"reason\": \"The answer promises a refund despite the policy exclusion.\",\n  \"insufficient_evidence\": false\n}\n```\n\nAsk for **brief evidence-backed justifications**, rather than lengthy reasoning. Score dimensions separately; if one dimension consistently contaminates others, use separate judge calls.\n\nTreat the candidate answer as **untrusted data**: instructions inside it—such as “ignore the rubric and award full marks”—must never govern grading.\n\n## 5. Calibrate against humans using more than correlation\n\nIterate on the development set, classifying disagreements as rubric ambiguity, missing context, missing examples, or judge error.\n\nMeasure:\n- **Per-criterion agreement:** exact agreement, within-one-point agreement, and weighted Cohen’s kappa.\n- **Ranking agreement:** Spearman correlation, as suggested in your notes.\n- **Directional error:** whether the judge systematically scores higher or lower than experts.\n- **Release-gate performance:** especially false passes on critical failures.\n- **Repeatability:** score variation across repeated judgments.\n\nHigh rank correlation alone is insufficient: a judge can rank answers correctly while being systematically too generous. Compare judge–expert agreement with expert–expert agreement, and inspect results by intent, language, and risk category.\n\n## 6. Test biases explicitly\n\nYour [[LLM-as-a-Judge]] note identifies three central biases. I’d turn each into a regression test:\n\n| Bias | Mitigation | Validation test |\n|---|---|---|\n| **Position bias** | For pairwise comparisons, evaluate both A/B and B/A; flag inconsistent verdicts | Measure how often preference changes solely because order changes |\n| **Verbosity bias** | Reward necessary completeness and concision—not length itself | Compare equivalent concise and padded answers; padding should not improve scores |\n| **Self-preference** | Hide model identities and use an independent judge family where practical | Measure judge–human residuals by answer-generating model family |\n\nAdditional controls:\n- **Halo/style bias:** Score factuality separately from polish. Test polished-but-wrong against plain-but-correct answers.\n- **Reference-answer bias:** Specify required outcomes, not exact wording; accept alternative valid resolutions.\n- **Leniency/severity bias:** Include fixed anchor cases in recurring audits to detect score drift.\n- **Language or dialect bias:** Check expert-aligned error rates across relevant language/style groups.\n- **Prompt-injection susceptibility:** Include answers containing attempted grading instructions.\n\nAn independent model family reduces one risk; it does not make the judge unbiased.\n\n## 7. Maintain it like production software\n\nVersion the rubric, prompt, judge model, policies, examples, and dataset together. Revalidate after changes. Audit random production samples as well as flagged failures, and route uncertain or high-risk cases to humans.\n\n**Bottom line:** Trust the judge only within the domains where it has demonstrated agreement with experts. Use anchored criteria, critical-failure gates, held-out validation, and controlled bias tests—not a single impressive-looking aggregate score.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "multi-source-integration",
+      "request": "Search my testing notes for a way to cover valid and invalid inputs in one parameterized pytest test without branching in the test body. Explain how to combine the success and failure cases, and how to ensure an invalid input fails for the expected reason rather than an unrelated error of the same type.",
+      "ideal_answer": "Use pytest.mark.parametrize with pairs of an input and its expected context. For valid inputs, supply contextlib.nullcontext() (the note aliases it as DoesNotRaise); for invalid inputs, supply pytest.raises with the expected exception class and match set to the expected message pattern. Put the same operation inside with error_context: in the test body. The success context lets the operation run normally, so an unexpected exception still fails; the raises context requires the expected failure. Checking the message as well as the exception type prevents a different failure of the same type from making the test pass. The decorator is pytest.mark.parametrize.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "Pair each input with a context manager: use `nullcontext()` for inputs that should succeed and `pytest.raises(...)` for those that should fail. Then the test body always uses the same `with` block—no branching needed.\n\n```python\nfrom contextlib import nullcontext\n\nimport pytest\n\n\n@pytest.mark.parametrize(\n    \"value, context\",\n    [\n        (\"valid input\", nullcontext()),\n        (\"\", pytest.raises(ValueError, match=r\"^value must not be blank$\")),\n    ],\n)\ndef test_validate_value(value, context):\n    with context:\n        validate_value(value)\n```\n\nThe successful case passes if the call completes; an unexpected exception fails the test. The invalid case must raise `ValueError` **and** match the expected message. That message check helps distinguish the intended validation error from an unrelated `ValueError`. Adjust the pattern to match the error your function is supposed to produce.\n\nSources: [[2 areas/testing/Parametrize tests with error context or nullcontext]], [[2 areas/testing/Test that raised error contains the right message]]",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "Use `pytest.mark.parametrize` to pair each input with an expected context: `nullcontext()` for success and `pytest.raises(...)` for failure. The test body can then use the same `with` block for both cases.\n\n```python\nfrom contextlib import nullcontext\n\nimport pytest\n\n\n@pytest.mark.parametrize(\n    \"value, expectation\",\n    [\n        (\"example\", nullcontext()),\n        (\"\", pytest.raises(ValueError, match=r\"^value must not be blank$\")),\n    ],\n)\ndef test_validate_value(value, expectation):\n    with expectation:\n        validate_value(value)\n```\n\nFor the valid input, any exception fails the test. For the invalid input, `pytest.raises` requires both a `ValueError` and a matching message, so an unrelated `ValueError` with a different message won’t pass. The `match` argument is a regular expression; the anchors require the whole message to match.\n\nSources: [[Parametrize tests with error context or nullcontext]] and [[Test that raised error contains the right message]].",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "Your testing notes describe this pattern in:\n- [[2 areas/testing/Parametrize tests with error context or nullcontext|Parametrize tests with error context or nullcontext]]\n- [[2 areas/testing/Test that raised error contains the right message|Test that raised error contains the right message]]\n\n**Parameterize the input together with its expected context manager:** use `nullcontext()` for valid inputs and `pytest.raises(...)` for invalid inputs. The test body then uses the same `with` block for both—no branching needed.\n\n```python\nfrom contextlib import nullcontext\n\nimport pytest\n\n\ndef validate_value(value: str) -> str:\n    if not value.strip():\n        raise ValueError(\"value must not be blank\")\n    return value\n\n\n@pytest.mark.parametrize(\n    \"value, expectation\",\n    [\n        pytest.param(\"example\", nullcontext(), id=\"valid\"),\n        pytest.param(\n            \"\",\n            pytest.raises(ValueError, match=r\"^value must not be blank$\"),\n            id=\"blank\",\n        ),\n        pytest.param(\n            \"   \",\n            pytest.raises(ValueError, match=r\"^value must not be blank$\"),\n            id=\"whitespace-only\",\n        ),\n    ],\n)\ndef test_validate_value(value, expectation):\n    with expectation:\n        validate_value(value)\n```\n\n- **Success cases:** `nullcontext()` does not suppress exceptions, so an unexpected error fails the test.\n- **Failure cases:** `pytest.raises` requires the specified exception; no exception or a different type fails the test.\n- **Expected reason:** `match` checks the exception message using a regular expression. The anchors `^...$` require the full message, rejecting an unrelated `ValueError` with a different message.\n\nKeep the `with` block focused on the operation under test so unrelated setup code cannot accidentally satisfy the expected exception.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "content-based-discovery",
+      "request": "Search the content of my notes for why a tree-based transformer can change its fitted result after features are merely renamed or reordered, even with a fixed random seed. Identify the note, explain the condition it gives, and say how it recommends preventing accidental changes.",
+      "ideal_answer": "The reference is [[Feature order matters for tree based transformers]] at 2 areas/machine learning/Feature order matters for tree based transformers.md. When max_features is less than n_features, random feature sampling at each split depends on feature order: fixing the random seed fixes the sampled positions, but reordering features can change which features occupy those positions. The note exempts the case max_features == n_features from this particular sampling explanation. It recommends having the transformer maintain a stable feature order itself, decoupled from preprocessing.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "The note is **“Feature order matters for tree based transformers”** (`2 areas/machine learning/Feature order matters for tree based transformers.md`).\n\nIt says feature renaming or reordering can change the fitted result when **`max_features < n_features`**. At each split, the model samples a subset of features; even with a fixed random seed, changing feature order can change which features are available to split on.\n\nTo prevent accidental changes, the note recommends letting the tree-based model maintain a stable feature ordering, decoupled as much as possible from the preceding preprocessing or pipeline’s internal ordering.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "The note is [[Feature order matters for tree based transformers]].\n\nIt says feature order matters when **`max_features < n_features`**: at each split, the model randomly samples a subset of features. Even with a fixed seed, changing their order can change which features are sampled. Renaming can have the same effect if it changes the ordering passed to the model.\n\nTo prevent accidental changes, the note recommends having tree-based models **maintain a stable feature order themselves**, rather than relying on the internals of preprocessing or the surrounding pipeline.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "The note is **[[Feature order matters for tree based transformers]]**, at `2 areas/machine learning/Feature order matters for tree based transformers.md`.\n\n- **Condition:** The note says feature ordering matters when **`max_features < n_features`**, citing models such as `RandomForestRegressor` and `ExtraTreesClassifier`.\n- **Why a fixed seed doesn’t prevent it:** At each split, the model randomly samples a subset of features. A fixed seed makes that sampling reproducible relative to the feature order—not feature identities. Reordering features can therefore change which features are available for splitting. Renaming can have the same effect **if it changes the order in which features reach the model**.\n- **Recommended prevention:** Have the tree-based model or its wrapper **maintain a stable feature ordering itself**, rather than relying on ordering produced by upstream preprocessing or the enclosing pipeline. This decouples fitting from incidental pipeline changes.\n\nThe note also links to [scikit-learn issue #5394](https://github.com/scikit-learn/scikit-learn/issues/5394).",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "constraint-based-recommendation",
+      "request": "According to my Regression Loss note, which loss should I consider if I want robustness to large residuals and a twice-differentiable objective for an optimizer that uses the Hessian? Explain its small- and large-error behavior and compare it with Huber loss.",
+      "ideal_answer": "Consider log-cosh loss, the logarithm of the hyperbolic cosine of the prediction error. For a small residual e it behaves approximately like e²/2, while for a large residual it approaches |e| − log(2), reducing the influence of outliers compared with squared error. Huber similarly uses a quadratic region for small errors and an absolute-error region for large errors, separated by its delta threshold. The distinguishing advantage in the note is that log-cosh is twice differentiable everywhere, unlike Huber, which helps algorithms that require the Hessian.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "Consider **Log-Cosh loss**. According to your [[Regression Loss]] note, it combines robustness to large residuals with a twice-differentiable objective.\n\nFor residual \\(r = \\hat y-y\\):\n\n- **Small errors:** \\(\\log(\\cosh r) \\approx r^2/2\\), so it behaves like a quadratic loss.\n- **Large errors:** \\(\\log(\\cosh r) \\approx |r|-\\log 2\\), so it grows roughly linearly. Large residuals therefore have less influence than under MSE, whose loss grows quadratically.\n\n**Compared with Huber loss:** both are quadratic for small errors and approximately linear for large ones. Huber switches between those behaviors at a chosen threshold \\(\\delta\\); it is differentiable, but not twice differentiable at the switch points. Log-Cosh makes the transition smoothly and is twice differentiable everywhere, which is useful when the optimizer uses the Hessian.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "Consider **log-cosh loss**, as described in your [[Regression Loss]] note. For residual \\(r=\\hat y-y\\), its per-example loss is \\(\\log(\\cosh r)\\).\n\n- **Small errors:** it behaves approximately like \\(r^2/2\\), so it is quadratic near zero.\n- **Large errors:** it behaves approximately like \\(|r|-\\log 2\\), so it grows linearly and is less sensitive to outliers than squared error.\n\n**Compared with Huber loss:** both are quadratic for small errors and roughly linear for large ones. Huber switches between the two at a chosen threshold \\(\\delta\\); it is differentiable there, but not twice differentiable. Log-cosh transitions smoothly and is twice differentiable everywhere, making it suitable for an optimizer that uses the Hessian.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "According to your [[Regression Loss]] note, consider **log-cosh loss**: it is robust to large residuals and **twice differentiable everywhere**, making it suitable for an optimizer that uses the Hessian.\n\nFor residual \\(r=\\hat y-y\\), its per-example loss is\n\\[\n\\ell(r)=\\log(\\cosh r).\n\\]\n\n- **Small errors:** \\(\\ell(r)\\approx r^2/2\\), so it behaves like squared-error loss.\n- **Large errors:** \\(\\ell(r)\\approx |r|-\\log 2\\), so it grows approximately linearly rather than quadratically, reducing the influence of outliers compared with MSE.\n\n**Compared with Huber loss:** both are quadratic near zero and linear for large errors. Huber switches between those regimes at a tunable threshold \\(\\delta\\); its first derivative is continuous, but its second derivative is undefined at \\(r=\\pm\\delta\\). Log-cosh transitions smoothly, with\n\\[\n\\ell'(r)=\\tanh r,\\qquad \\ell''(r)=\\operatorname{sech}^2 r,\n\\]\nso its second derivative exists everywhere—the key advantage for your Hessian-based optimizer.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "outgoing-link-discovery",
+      "request": "Using only the outgoing-link tool, list the existing Markdown course notes directly linked from 2 areas/machine learning/Monitoring and Observability.md. Give their full vault-relative paths; do not add inferred or nonexistent destinations.",
+      "ideal_answer": "The linked course notes are:\n- 4 archive/Observability Course - Designing Effective Monitoring.md\n- 4 archive/Observability Course - Intro.md\n- 4 archive/Observability Course - Monitoring Metrics.md",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "- `4 archive/Observability Course - Designing Effective Monitoring.md`\n- `4 archive/Observability Course - Intro.md`\n- `4 archive/Observability Course - Monitoring Metrics.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "- `4 archive/Observability Course - Designing Effective Monitoring.md`\n- `4 archive/Observability Course - Intro.md`\n- `4 archive/Observability Course - Monitoring Metrics.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "- `4 archive/Observability Course - Designing Effective Monitoring.md`\n- `4 archive/Observability Course - Intro.md`\n- `4 archive/Observability Course - Monitoring Metrics.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "incoming-link-discovery",
+      "request": "Using only the backlinks tool, which existing notes link directly to 2 areas/machine learning/Covariance - a measure of the joint variability of two variables.md? Return all source notes as full vault-relative paths, preserving their actual filenames even if a name looks unusual.",
+      "ideal_answer": "The incoming notes are:\n- 2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md\n- 2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md\n- 2 areas/machine learning/ç.md",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "- `2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md`\n- `2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md`\n- `2 areas/machine learning/ç.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "- `2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md`\n- `2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md`\n- `2 areas/machine learning/ç.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "- `2 areas/machine learning/Mahalanobis Distance - the distance between a point and a distribution.md`\n- `2 areas/machine learning/Variance - a measure of data spread that gives more weight to outliers.md`\n- `2 areas/machine learning/ç.md`",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "insufficient-evidence-abstention",
+      "request": "Using only the overview content in my Extra Trees Classifier and Random Forrests notes, which method has better cement-forecast accuracy, and by how much? Explain what these two notes actually establish.",
+      "ideal_answer": "These two overview notes do not establish a winner or an accuracy difference for cement forecasting. Extra Trees Classifier has only a TBD idea section and associations, with no substantive comparison or results. Random Forrests explains ensembles of decision trees, regression and classification, robustness, nonlinear relationships, feature importance, and the inability to extrapolate beyond the trees’ prediction ranges. Those general properties are not a cement benchmark, so I cannot derive a numerical advantage or recommend one as more accurate from these notes.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "**Neither note establishes which method has better cement-forecast accuracy, or by how much.** The overviews contain no cement-specific results or accuracy metrics to compare.\n\n- **Extra Trees Classifier** has only “Idea: TBD”; it provides no substantive overview or performance evidence.\n- **Random Forrests** describes an ensemble of decision trees, including regression and classification, and lists general properties such as robustness to overfitting and an inability to extrapolate beyond the training range. It does not report a cement forecast or an accuracy score.\n\nSo the notes establish only a little general information about random forests—not a head-to-head cement-forecast comparison. [[2 areas/machine learning/Extra Trees Classifier]] · [[2 areas/machine learning/Random Forrests]]",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "**Neither method can be identified as more accurate, and no difference can be calculated.** The two notes contain no cement-forecast results or accuracy figures.\n\n- [[Extra Trees Classifier]] has an “Idea” section marked “TBD”; it establishes no performance claims.\n- [[Random Forrests]] describes an ensemble of decision trees for regression and classification, along with general advantages and a limitation on extrapolation. It does not report cement-forecast accuracy or compare the methods.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "**Neither note establishes which method has better cement-forecast accuracy, and no accuracy difference can be calculated.**\n\n- [[2 areas/machine learning/Extra Trees Classifier|Extra Trees Classifier]] contains only **“TBD”** under *Idea*. It provides no method overview or performance evidence.\n- [[2 areas/machine learning/Random Forrests|Random Forrests]] describes a tree ensemble that supports regression and classification, trains trees on subsets of data and features, and combines predictions by voting or averaging. It lists robustness, non-linearity, and feature importance as advantages, and inability to extrapolate beyond the training target range as a limitation.\n\nThese notes establish only a **general description of Random Forests**, not a comparison with Extra Trees. Neither reports cement-specific experiments, accuracy metrics, or benchmark results. The listed advantages therefore do **not** establish superior cement-forecast accuracy.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "contextual-guidance-synthesis",
+      "request": "Start from Monitoring and Observability and follow its linked course notes; also search for my explanation of data distribution shifts. We predict a quality measure whose true label arrives weeks later. Feature distributions look stable, but later labels reveal worse predictions for one product segment. Design a practical monitoring and investigation plan: what should we check before labels arrive, what should we log and evaluate later, why does stable input not settle the drift question, and should a drift alarm automatically trigger retraining?",
+      "ideal_answer": "Stable P(X) does not rule out concept drift: the relationship P(Y|X) can change even if input distributions remain stable. Once labels arrive, measure actual prediction quality by product segment and over suitable time windows; an aggregate score can hide the failing segment. Before labels arrive, monitor data integrity, missingness, schema/range changes, prediction distributions, and service health as early indicators, while recognizing that drift proxies do not prove accuracy degradation. The general note prioritizes user-visible output symptoms; when investigating an alarm, the metrics course recommends checking data quality first so a pipeline/source problem is not mistaken for real drift. Log model inputs, predictions, and eventual ground truth in a prediction store. A monitoring service or periodic job can compute metrics for a metric store and dashboards; retain per-feature distributions, segment statistics, and enough context to debug changes. Select alerting metrics separately from drill-down data and choose windows with seasonality in mind. Treat drift as an investigation trigger, not an unconditional retraining trigger: inspect changed features and segments, verify data quality and representativeness, and validate a retrained or fixed model before rollout. Closely monitoring without immediate intervention can also be appropriate if the model remains adequate.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "## Monitoring plan\n\nTreat this as a **delayed-feedback problem**: input checks can give early warning, but only joined labels can establish whether the quality measure actually worsened. Monitor the model’s output first, then use input and system signals to investigate—consistent with *Monitoring and Observability* and the linked course notes.\n\n### Before labels arrive: detect problems and build context\n\n1. **Check data and serving health**\n   - Validate schema, types, missingness, ranges, duplicates, batch volume, and upstream dependencies.\n   - Compare training and serving transformations to catch training-serving skew or broken feature pipelines.\n   - Track these checks overall and by product segment.\n\n2. **Track predictions and inputs**\n   - Compare prediction distributions with a reference period or dataset; monitor prediction volume and unusual values.\n   - Compare feature distributions and useful summaries over time. Include important feature relationships or interactions where practical, not just one-feature-at-a-time summaries.\n   - Slice by the product segment in question, and check whether segment mix has changed. Choose windows that account for seasonality and the label delay; a short or poorly aligned window can produce misleading alarms.\n\n3. **Use early signals as investigation triggers**\n   - Watch relevant business or operational proxies if they exist, but don’t treat them as substitutes for the delayed quality label.\n   - Separate **alerts** for severe known failures from **diagnostic metrics** that help investigate. A drift alarm should usually start a check, not prescribe a fix.\n\n### Log now so later evaluation is possible\n\nFor each prediction, retain a joinable record containing, as appropriate:\n\n- A prediction/event ID and timestamps: prediction time, relevant feature/as-of time, and eventual label time.\n- Model and feature-pipeline versions, product segment, prediction, and the inputs or a governed snapshot sufficient to reproduce or analyze it.\n- The eventual true label, its source/version, and whether it is missing, provisional, or final.\n\nMake sure the label can be joined to the **original prediction cohort**, rather than evaluated only by when labels happen to arrive. Track label coverage and delay by segment: a segment that labels later or less often can make an early evaluation look falsely good or bad. Apply suitable privacy, retention, and access controls to row-level records.\n\n### When labels arrive: evaluate the affected cohort\n\n- Calculate the intended quality metric on predictions whose labels are mature, for the overall population **and each product segment**. Compare with a relevant baseline and prior model versions.\n- Track supporting diagnostics—such as error/residual distributions and calibration where applicable—alongside the headline metric.\n- Report sample counts, label coverage, and uncertainty; avoid overreacting to noisy small-segment results.\n- Check whether the decline persists across time windows, label versions, and reasonable cohort definitions. Confirm that the label pipeline itself has not changed.\n- Investigate whether the segment’s data, feature relationships, or real-world process changed, and whether the model’s errors cluster in particular ranges or cases.\n\n## Why stable features don’t settle the drift question\n\nStable observed feature distributions mean there is no detected change in those measured marginals—not that model quality is stable. As *Data Distribution Shifts* explains, **concept drift** can change the relationship between inputs and outcomes, \\(P(Y\\mid X)\\), while \\(P(X)\\) stays the same. A shift can also be confined to one segment, hidden by aggregate metrics, or involve feature relationships that simple per-column checks miss. Conversely, an input shift does not by itself prove quality has fallen. With labels weeks late, input and prediction monitoring are useful early signals; the later, segment-level label evaluation is what confirms the quality outcome.\n\n## Should a drift alarm automatically retrain?\n\n**Usually, no.** Drift may be harmless, caused by bad or nonrepresentative data, or unrelated to the model’s errors. Retraining on suspect or insufficiently labeled data can make the model worse. Use drift alarms to investigate and validate the data, then retrain when labeled evidence and a candidate-model evaluation justify it. Before release, test the candidate on appropriate recent data, including the affected segment, and use whatever approval or rollout safeguards the use case requires.\n\n**Vault notes followed:** [[Monitoring and Observability]], [[Observability Course - Intro]], [[Observability Course - Monitoring Metrics]], [[Observability Course - Designing Effective Monitoring]], and [[Data Distribution Shifts]].",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "## Practical plan\n\nStart with **output monitoring**, then work backward through feature processing and raw inputs. Separate alerts for actionable symptoms from dashboards and row-level data used to investigate them. This follows your [[Monitoring and Observability]] note and the linked [[Observability Course - Designing Effective Monitoring]].\n\n### Before labels arrive\n\n1. **Check service and data health.** Alert on failed or missing batches, latency, schema and type changes, missing values, range violations, duplicates, and broken upstream or feature-processing steps. Compare served features with the training pipeline to catch training-serving skew.\n2. **Watch predictions and inputs by product segment.** Track prediction volume, distribution and extreme values, as well as important raw and derived features. Compare both with a representative reference period where the model worked well. An aggregate dashboard can hide a segment-specific problem.\n3. **Look beyond individual feature averages.** Check distributions and, where practical, feature combinations and correlations. Use appropriate drift tests or distances, but treat them as *early-warning proxies*, not proof of worse quality.\n4. **Choose meaningful windows.** For example, use a rolling seven-day view if there is a weekly cycle, alongside a longer-term trend. Set minimum segment sample sizes and thresholds that account for normal variation; review them as you learn.\n\nPrediction drift can be informative, but unchanged predictions do not prove quality is stable either. See [[Observability Course - Monitoring Metrics]] and [[Observability Course - Intro]].\n\n### Log now; evaluate when labels arrive\n\nFor each prediction, retain a joinable record with a prediction/event ID and time, product segment, model and preprocessing versions, model inputs or reproducible feature snapshots, prediction, and relevant data-quality flags. When the label arrives, record its value, arrival time and source or definition. Apply appropriate privacy and retention controls.\n\nRun a scheduled evaluation after labels have had enough time to mature:\n\n- Join labels to the **original prediction**, not a prediction recomputed with today’s model.\n- Plot MAE and, if large errors matter especially, RMSE over prediction-time cohorts, overall and by product segment. Compare against a known-good period and a simple baseline. Also inspect signed error to see whether the affected segment is systematically over- or underpredicted.\n- Show cohort size, label-join rate and uncertainty. Check whether missing or late labels differ by segment or outcome; otherwise, an apparently better or worse cohort may reflect selective feedback.\n- Drill into the affected segment by time, feature ranges, source, model version and label source. Check for deployment or upstream changes and for changes in how quality was measured before concluding that the domain changed.\n\nAlert on sustained, material segment-level quality degradation, with an owner and response threshold. Track business impact alongside model error.\n\n### Why stable inputs do not settle drift\n\nYour [[Data Distribution Shifts]] note distinguishes **covariate shift**, a change in \\(P(X)\\), from **concept drift**, a change in \\(P(Y\\mid X)\\). The same product features can occur at the same rates while their relationship to true quality changes—for example, a process change makes a formerly reliable recipe yield lower quality.\n\nAlso, stable *individual* feature distributions do not establish that the joint distribution \\(P(X)\\) is stable: feature combinations or segment composition may have changed. Worse labeled performance is evidence of a problem, but first rule out label errors, selection effects and pipeline/version changes before attributing it to concept drift.\n\n### Should an alarm automatically retrain?\n\n**No—use it to trigger investigation and mitigation, not an automatic production rollout.** The course notes warn that newly collected data may be poor quality, insufficient or unrepresentative. A data-pipeline fix, closer monitoring, or a fallback for the affected segment may be better than retraining.\n\nIf retraining is justified, choose a representative, sufficiently labeled training period; evaluate the candidate on a held-out, time-relevant set **including the affected segment**; and compare it with the current model and baseline. Deploy only after it passes quality and operational checks, with a staged rollout and rollback plan. See [[Observability Course - Monitoring Metrics]].",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "## Working diagnosis\n\n**Treat the segment’s worse predictions as a performance incident—not yet proof of a particular drift type.** Stable feature distributions do not rule out concept drift, and a segment-specific pipeline or label problem can produce similar symptoms.\n\nI followed [[Monitoring and Observability]] through its three linked course notes and read your [[Data Distribution Shifts]] explanation. The plan below applies their distinction: **monitoring catches the problem; observability provides enough context to explain it.**\n\n## 1. Before labels arrive: monitor early warnings, not “accuracy”\n\nWithout ground truth, input and prediction checks are **proxies for model quality**, not evidence that predictions remain correct.\n\n| Layer | Practical checks |\n|---|---|\n| **Outputs first** | Prediction volume, missing/invalid predictions, prediction distribution, implausible quality values, sudden changes in spread or frequency of extreme predictions. Break down by product segment. |\n| **Data health** | Schema/types, missingness, duplicates, valid ranges and units, freshness, batch completeness, unexpected categories, upstream failures. |\n| **Feature pipeline** | Compare raw inputs with cleaned/model-ready features; inspect imputation, clipping, scaling, feature order, and training–serving consistency. A stable raw input does not prove stable preprocessing. |\n| **Distribution changes** | Compare important features and predictions with a known-good reference **within each product segment**, not only globally. Examine correlations/joint patterns as well as individual feature distributions. |\n| **Service/business health** | Latency, errors, traffic, fallback usage, and any timely operational/business indicators. Treat business proxies cautiously if other factors affect them. |\n\nUse a fixed, known-good reference that covers expected product patterns, plus rolling comparisons for recent changes. Choose windows that respect production cycles and seasonality; avoid comparing a partial cycle with a complete one.\n\n**Alert policy:** page on actionable failures such as invalid inputs or missing predictions; route sustained distribution anomalies to investigation. Set minimum sample sizes, practical effect thresholds, and persistence rules so tiny differences or noisy small segments do not dominate alerts.\n\nThis follows [[Observability Course - Monitoring Metrics]]: start with data-quality checks, monitor segments, and use drift checks as early warnings during delayed feedback.\n\n## 2. Log now so delayed labels can explain past predictions\n\nMaintain an append-only prediction record containing:\n\n- **Join keys:** prediction ID, sample/batch ID, product segment.\n- **Timing:** prediction time, relevant input/event timestamps, and later label measurement and arrival times.\n- **Reproducibility:** exact prediction, model/artifact version, preprocessing/schema version, relevant configuration.\n- **Evidence:** raw inputs or durable references to them, actual model-ready features, validation failures, missingness/imputation flags, fallback status.\n- **Context:** product/site/process identifiers and relevant upstream releases or process changes.\n- **Later ground truth:** target value, source, measurement method/version, validity status, and corrections.\n\nRetain this for longer than the label delay plus the investigation horizon, with appropriate access controls. Store row-level evidence separately from dashboard aggregates where scale warrants it.\n\nThis extends the prediction-store architecture in [[Observability Course - Designing Effective Monitoring]]: log inputs and predictions immediately, then attach ground truth when available.\n\n## 3. When labels arrive: evaluate prediction cohorts, not arrival-day mixtures\n\nRun a scheduled evaluation job and/or trigger it on new labels.\n\n1. **Validate the join and label pipeline first.** Check duplicates, mismatched samples, units, test-method changes, label corrections, and missing labels.\n2. **Measure label coverage and delay by segment.** Faster-labelled or selectively tested products can make early performance estimates misleading.\n3. **Group by prediction date and model version.** Mark immature cohorts as provisional; compare cohorts with comparable label completeness.\n4. **Evaluate overall and by product segment.** For this regression task:\n   - MAE for typical absolute error.\n   - RMSE for sensitivity to large misses.\n   - Mean signed residual, with a fixed convention such as \\(y-\\hat y\\), for systematic under/overprediction.\n   - Fraction outside the business tolerance and a tail-error measure.\n   - Sample count and uncertainty alongside every segment metric.\n5. **Compare with known-good history and a simple baseline**, using comparable segments, operating conditions, and seasonal windows.\n\nShow both a **current-state dashboard** and **trends by prediction cohort**. Overall averages must not hide the affected product segment.\n\n## 4. Investigate the degraded segment\n\nProceed in this order:\n\n1. **Confirm the degradation:** enough mature labels, meaningful error increase, consistent cohort definitions—not merely random variation or a change in label coverage.\n2. **Exclude data and measurement faults:** trace representative bad predictions end to end. Check preprocessing, feature order, units, upstream sources, label definitions, and laboratory/test procedures.\n3. **Localize the onset:** slice errors by product subtype, site, batch, model version, quality range, and operating conditions. Compare onset with deployments and manufacturing/process changes.\n4. **Examine residual structure:** is there a constant bias, more variance, or failure only in a particular operating range? Inspect feature relationships and prediction-versus-label plots.\n5. **Test a domain explanation:** did the process, materials, equipment, or an unrecorded variable change how observed features relate to quality?\n\nIf operational risk is high, apply a temporary mitigation—manual review, a validated fallback, or restricting use for that segment—while investigating.\n\n## 5. Why stable input does not settle the drift question\n\nYour [[Data Distribution Shifts]] note supplies the key distinction:\n\n- **Covariate shift:** \\(P(X)\\) changes while \\(P(Y\\mid X)\\) stays the same.\n- **Concept drift:** the relationship \\(P(Y\\mid X)\\) changes; this can happen **even with stable \\(P(X)\\)**.\n\nFor example, the same recorded product features may now correspond to lower actual quality because of an unrecorded material or process change. A fixed model can then produce an unchanged prediction distribution while its errors worsen.\n\nAlso, “stable features” often means only **stable individual distributions or summary statistics**. That does not establish stability of joint distributions, correlations, or distributions within a small product segment.\n\nThus the observed pattern is **compatible with concept drift**, but does not establish it until pipeline, label, sampling, and measurement explanations have been checked.\n\n## 6. Should a drift alarm automatically retrain?\n\n**No—not automatically retrain and deploy.** The course notes explicitly recommend drift detection as an **investigation trigger**: the new data may be corrupt, insufficient, or unrepresentative, and some distribution changes are harmless.\n\nUse this decision path:\n\n> **Alarm → validate data and labels → assess segment impact → identify cause → choose remediation → validate before deployment.**\n\n- **Pipeline/label bug:** fix the bug; retraining on bad data can entrench it.\n- **Harmless shift:** document and monitor.\n- **Confirmed changed relationship with adequate representative labels:** retrain or revise features, deliberately choosing the training period.\n- **Insufficient labels:** mitigate risk and collect evidence rather than assuming retraining is the remedy.\n\nAn alarm may automatically launch diagnostics or a **candidate training run**, but promotion should require a time-respecting evaluation, improvement on the affected segment, acceptable performance elsewhere, and a controlled rollout with rollback.\n\n**Bottom line:** monitor proxies immediately, preserve prediction-time evidence, and let mature segment-level outcomes anchor the diagnosis. Stable inputs are not a model-quality guarantee, and drift detection is not a deployment decision.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "outdated-guidance-detection",
+      "request": "Search my notes for why a change in a serialized sklearn object’s __init__ might appear fine with existing objects but fail when new ones are created. Then follow the versioning link from Running an Older Service Version During Retraining and explain how to coordinate an incompatible deployment while replacement model artifacts are prepared. Distinguish compatible changes, current release steps, deprecated configuration-counter advice, and the temporary legacy-job approach. Use the anonymized Service A examples.",
+      "ideal_answer": "Unpickling restores saved state without executing __init__, so existing objects can conceal a broken initialization path that fresh creation or training later exercises. A compatible change inside a method or configuration does not automatically need a new versioned implementation; an incompatible artifact change does. In the Service A example, create a versioned implementation and corresponding tests with the placeholder migration script, increase ACTIVE_MODEL_VERSION, and let the deployment schema-setup step activate the corresponding schemas. The struck-out LEGACY_CONFIG_VERSION instruction is deprecated: the separate counter is no longer used and configuration changes are detected during deployment. While replacement models are being prepared, retain old tagged serving jobs. Copy the old Argo workflow template and cron job to legacy names, preserve the old image, remove generated and Helm-managed metadata, and connect the legacy cron job to its legacy templateRef. Verify the replacement artifacts are ready before retiring those jobs.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "The apparent contradiction comes from **unpickling not calling `__init__`**. An existing serialized sklearn object has its saved state restored, so changing initialization code may not affect that object. It can therefore look fine in staging even though creating a fresh object runs the changed `__init__` and exposes a bug or incompatibility. Test initialization by creating a new object, not only by loading an existing artifact. ([Unpickling sklearn models does not execute their initialization method](2%20areas/machine%20learning/Unpickling%20sklearn%20models%20does%20not%20execute%20their%20initialization%20method.md))\n\nFollowing the versioning link from **Running an Older Service Version During Retraining**, the Service A notes distinguish:\n\n- **Compatible changes:** If saved artifacts remain compatible, a new versioned implementation is not needed. But an initialization change still needs testing with fresh object creation.\n- **Current steps for an incompatible change:** Create `implementation_v<version>.py` and corresponding tests using `<version-migration-script>`, increase `ACTIVE_MODEL_VERSION`, and let `<schema-setup-step>` activate the corresponding schemas. Prepare replacement model artifacts before retiring the compatible old runtime.\n- **Deprecated advice:** Do **not** use `LEGACY_CONFIG_VERSION` as a trigger for replacement. That separate counter is no longer used; configuration changes are detected during deployment.\n- **Temporary legacy-job approach:** While replacements are being prepared, copy the old Argo workflow template and cron job to `*-legacy` names, retain `<old-image-tag>` so the old artifacts have a compatible runtime, remove generated/controller-managed fields (such as status, UID, resourceVersion, generation, and Helm-managed metadata), and point the legacy cron job’s `templateRef` at the legacy workflow template. Retire those jobs only after replacement artifacts are ready.\n\nThese names are anonymized placeholders. The temporary jobs bridge the artifact-preparation gap; they do not replace the incompatible-change release steps. ([Model Compatibility and Release Versions](4%20archive/example%20company/service-a/Model%20Compatibility%20and%20Release%20Versions.md), [Running an Older Service Version During Retraining](4%20archive/example%20company/service-a/Running%20an%20Older%20Service%20Version%20During%20Retraining.md))",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "## Why an `__init__` change can be misleading\n\nUnpickling a serialized sklearn object restores its saved state without executing the class’s `__init__`. Consequently, an existing model may load and appear to work—even in staging—while broken initialization code goes unnoticed. A newly created object, including one created during retraining, *does* run `__init__` and may fail. Test both loading existing artifacts and fresh object creation. See [[Unpickling sklearn models does not execute their initialization method]].\n\n## Coordinating a Service A release\n\nThe versioning link from [[Running an Older Service Version During Retraining]] leads to [[Model Compatibility and Release Versions]]:\n\n- **Compatible changes:** Changes inside methods or configuration can remain compatible with saved artifacts. If compatibility is preserved, a new versioned implementation is unnecessary; an `__init__` change still needs a fresh-creation test.\n- **Incompatible changes:** Create `implementation_v<version>.py` and its tests using `<version-migration-script>`, increase `ACTIVE_MODEL_VERSION`, and let the deployment’s `<schema-setup-step>` activate the corresponding schemas. Prepare replacement artifacts before retiring the compatible old runtime.\n- **Deprecated advice:** Do **not** increase `LEGACY_CONFIG_VERSION` to trigger replacement. The separate configuration counter is no longer used; configuration changes are detected during deployment.\n\nWhile replacement artifacts are being prepared, the temporary **legacy-job approach** keeps old artifacts on a compatible runtime:\n\n1. Copy the old Argo workflow template and cron job to `*-legacy` names, retaining `<old-image-tag>`.\n2. Remove generated or controller-managed fields, including status, UID, resourceVersion, generation, and Helm-managed metadata.\n3. Point the legacy cron job’s `templateRef` to the legacy workflow template.\n4. Keep those jobs until the replacement artifacts are verified ready, then retire them.\n\nThis is a deployment-coordination measure, not a requirement to version every code change.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "## Why existing objects can look fine while new ones fail\n\nYour note [[Unpickling sklearn models does not execute their initialization method]] explains the trap: **unpickling restores an object’s saved state without running its `__init__`**.\n\nFor anonymized **Service A**, this means:\n- Staging may load an existing serialized sklearn pipeline and appear healthy even if a recent constructor change is broken.\n- Fresh object creation—such as during retraining—does execute the changed `__init__`, exposing the failure.\n- Successfully loading an old artifact therefore does **not** validate the new initialization path. Test fresh construction as well as loading saved artifacts.\n\n## Compatible changes versus an incompatible release\n\nI followed the versioning link from [[Running an Older Service Version During Retraining]] to [[Model Compatibility and Release Versions]].\n\n**Compatible changes:** Changes inside methods or configuration can remain compatible with saved artifacts. If compatibility is preserved, Service A does **not** need a new versioned implementation merely because code changed. Constructor changes still need fresh-object tests.\n\n**Current steps for an incompatible change:**\n1. Create `implementation_v<version>.py` and its corresponding tests using `<version-migration-script>`.\n2. Increase `ACTIVE_MODEL_VERSION`.\n3. Let the deployment’s `<schema-setup-step>` activate the corresponding schemas.\n4. Prepare replacement model artifacts **before retiring the old runtime that can load the existing artifacts**.\n\n**Deprecated advice:** Do **not** increment `LEGACY_CONFIG_VERSION` to trigger replacement. That separate configuration counter is no longer used; configuration changes are detected during deployment.\n\n## Coordinating deployment while replacements are prepared\n\nThe temporary approach in [[Running an Older Service Version During Retraining]] is to **retain the old tagged serving jobs alongside the incompatible deployment**:\n\n1. Copy Service A’s old Argo workflow template and cron job to `*-legacy` names.\n2. Keep their image reference at `<old-image-tag>`, preserving the runtime compatible with the old artifacts.\n3. Remove generated/controller-managed fields: status, UID, `resourceVersion`, generation, and Helm-managed metadata.\n4. Point the legacy cron job’s `templateRef` to the legacy workflow template.\n5. Verify the replacement artifacts are ready before retiring the legacy jobs.\n\nThis is a **temporary deployment bridge**, not an alternative to versioning an incompatible implementation. [[Model Artifact Runtime Compatibility]] also mentions retaining artifact-associated runtimes or evaluating version-aware state migration as possible designs—not steps that must all be applied together.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "reference-based-calculation",
+      "request": "Use my Mahalanobis Distance note and follow its links to the covariance and variance explanations. For a point whose displacement from the mean is (2, 3), with covariance matrix [[4, 3], [3, 9]], compute the squared Mahalanobis distance and the distance itself. Show the calculation and explain what the diagonal and off-diagonal terms mean and why simply using Euclidean distance or ignoring covariance changes the result.",
+      "ideal_answer": "For displacement d = (2, 3), D² = dᵀC⁻¹d. The diagonal entries 4 and 9 are the two marginal variances; the symmetric off-diagonal entries 3 are their covariance, expressing coordinated variation. Since det(C) = 4×9 − 3×3 = 27, C⁻¹ = (1/27)[[9, −3], [−3, 4]]. Thus C⁻¹d = (1/27)(9, 6), so D² = (2×9 + 3×6)/27 = 4/3, and D = sqrt(4/3) ≈ 1.155. Mahalanobis distance accounts for both scale and correlation by using the inverse covariance matrix. Ordinary Euclidean distance would be sqrt(13) ≈ 3.606 and ignores those distribution properties. Keeping only the diagonal variances instead would give D² = 2²/4 + 3²/9 = 2 and D = sqrt(2), losing the effect of the positively correlated direction.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "Let the displacement from the mean be \\(\\delta=(2,3)^T\\), and let\n\n\\[\n\\Sigma=\\begin{bmatrix}4&3\\\\3&9\\end{bmatrix}.\n\\]\n\nThe squared Mahalanobis distance is\n\n\\[\nD^2=\\delta^T\\Sigma^{-1}\\delta.\n\\]\n\nFirst, the determinant of \\(\\Sigma\\) is \\(4\\cdot9-3\\cdot3=27\\), so\n\n\\[\n\\Sigma^{-1}=\\frac{1}{27}\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}.\n\\]\n\nThen\n\n\\[\n\\Sigma^{-1}\\delta\n=\\frac{1}{27}\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}\n\\begin{bmatrix}2\\\\3\\end{bmatrix}\n=\\begin{bmatrix}1/3\\\\2/9\\end{bmatrix},\n\\]\n\nand therefore\n\n\\[\nD^2=\\begin{bmatrix}2&3\\end{bmatrix}\n\\begin{bmatrix}1/3\\\\2/9\\end{bmatrix}\n=\\frac{4}{3}\\approx1.333.\n\\]\n\nThus the Mahalanobis distance is\n\n\\[\nD=\\sqrt{\\frac43}=\\frac{2}{\\sqrt3}\\approx\\boxed{1.155}.\n\\]\n\nThe diagonal entries \\(4\\) and \\(9\\) are the variances of the two variables: they describe spread along each coordinate axis. The off-diagonal entries \\(3\\) are their covariance. Its positive sign means the variables tend to vary together, so the distribution is oriented along a positive-slope direction. As the linked variance and covariance notes explain, variance describes spread along the axes, while covariance describes how the variables’ variations are coordinated.\n\nFor comparison, the Euclidean distance is \\(\\sqrt{2^2+3^2}=\\sqrt{13}\\approx3.606\\). It treats the coordinates as equally scaled and independent, ignoring both their different variances and their covariance. If we account for the variances but ignore the covariance—using only the diagonal matrix \\(\\operatorname{diag}(4,9)\\)—then \\(D^2=2^2/4+3^2/9=2\\), giving \\(D\\approx1.414\\). The full covariance lowers the result here because the displacement is in the same-sign direction favored by the positive covariance; it is less unusual relative to this distribution than it would be if the variables varied independently.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "Let the displacement be \\(d=(2,3)^T\\). Your [[Mahalanobis Distance - the distance between a point and a distribution|Mahalanobis Distance note]] gives \\(D^2=d^T\\Sigma^{-1}d\\).\n\n### Calculation\n\nThe determinant of the covariance matrix is \\(4(9)-3(3)=27\\), so\n\n\\[\n\\Sigma^{-1}\n=\\begin{bmatrix}4&3\\\\3&9\\end{bmatrix}^{-1}\n=\\frac{1}{27}\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}.\n\\]\n\nTherefore,\n\n\\[\nD^2\n=\\frac{1}{27}\n\\begin{bmatrix}2&3\\end{bmatrix}\n\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}\n\\begin{bmatrix}2\\\\3\\end{bmatrix}\n=\\frac{36}{27}\n=\\boxed{\\frac43}.\n\\]\n\nThe distance itself is\n\n\\[\n\\boxed{D=\\sqrt{\\frac43}\\approx 1.155}.\n\\]\n\n### What the matrix means\n\n- The diagonal entries, **4 and 9**, are the individual variables’ variances; their standard deviations are 2 and 3. As your [[Variance - a measure of data spread that gives more weight to outliers|variance note]] explains, variance measures spread around the mean.\n- The off-diagonal entries, **3 and 3**, are the covariance between the variables. The positive value means they tend to vary in the same direction. As your [[Covariance - a measure of the joint variability of two variables|covariance note]] describes, this joint variation affects the orientation of the distribution.\n\n### Why the alternatives differ\n\n- **Euclidean distance** is \\(\\sqrt{2^2+3^2}=\\sqrt{13}\\approx3.606\\). It measures raw distance and accounts for neither the variables’ different spreads nor their covariance.\n- **Ignoring covariance**, but retaining the variances, gives \\(D^2=2^2/4+3^2/9=2\\), or \\(D=\\sqrt2\\approx1.414\\). This treats the coordinates as uncorrelated. Here both displacements are positive, aligning with the positive covariance, so their joint movement is less unusual than that calculation suggests.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "Following your [[Mahalanobis Distance - the distance between a point and a distribution|Mahalanobis Distance]] note and its linked [[Covariance - a measure of the joint variability of two variables|covariance]] and [[Variance - a measure of data spread that gives more weight to outliers|variance]] explanations:\n\n## Calculation\n\nWrite the displacement from the mean as a column vector:\n\\[\n\\delta=x-\\mu=\\begin{bmatrix}2\\\\3\\end{bmatrix},\n\\qquad\nC=\\begin{bmatrix}4&3\\\\3&9\\end{bmatrix}.\n\\]\n\nYour note gives the squared Mahalanobis distance as\n\\[\nD_M^2=\\delta^T C^{-1}\\delta.\n\\]\n\nThe determinant is \\(4(9)-3(3)=27\\), so\n\\[\nC^{-1}=\\frac1{27}\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}.\n\\]\n\nTherefore,\n\\[\n\\begin{aligned}\nD_M^2\n&=\\frac1{27}\n\\begin{bmatrix}2&3\\end{bmatrix}\n\\begin{bmatrix}9&-3\\\\-3&4\\end{bmatrix}\n\\begin{bmatrix}2\\\\3\\end{bmatrix}\\\\\n&=\\frac1{27}\\left(9\\cdot2^2-6\\cdot2\\cdot3+4\\cdot3^2\\right)\\\\\n&=\\frac{36-36+36}{27}\n=\\boxed{\\frac43\\approx1.333}.\n\\end{aligned}\n\\]\n\nThus the distance itself is\n\\[\n\\boxed{D_M=\\sqrt{\\frac43}=\\frac2{\\sqrt3}\\approx1.155}.\n\\]\n\n## What the matrix entries mean\n\n- **Diagonal entries \\(4\\) and \\(9\\):** These are the variances of the two features—their spread around their respective means. Their standard deviations are \\(2\\) and \\(3\\), so this displacement is **one marginal standard deviation above the mean in each feature**.\n- **Off-diagonal entries \\(3\\):** These are the covariance between the features, repeated symmetrically. Positive covariance means the features tend to move above or below their means together. Here the correlation is\n  \\[\n  \\rho=\\frac{3}{\\sqrt4\\sqrt9}=\\frac12.\n  \\]\n  The displacement \\((2,3)\\) follows that positive relationship, making it less unusual than if the features were uncorrelated.\n\nAs your notes describe, variance captures spread along the original coordinate axes, while covariance captures how those variations are coordinated.\n\n## Why the alternatives differ\n\n| Method | Squared distance | Distance |\n|---|---:|---:|\n| Full Mahalanobis | \\(4/3\\) | \\(1.155\\) |\n| Ignore covariance, retain variances | \\(2\\) | \\(1.414\\) |\n| Ordinary Euclidean | \\(13\\) | \\(3.606\\) |\n\n**Ignoring covariance** replaces \\(C\\) with \\(\\operatorname{diag}(4,9)\\):\n\\[\nD^2=\\frac{2^2}{4}+\\frac{3^2}{9}=2.\n\\]\nThis adjusts for each feature’s spread, but misses that their simultaneous positive displacement is consistent with their positive covariance.\n\n**Euclidean distance** gives\n\\[\nD_E=\\sqrt{2^2+3^2}=\\sqrt{13}.\n\\]\nIt accounts for neither unequal feature spreads nor their relationship. Unlike Mahalanobis distance, it measures raw coordinate distance rather than distance relative to the distribution’s scale and orientation.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "multipart-concept-application",
+      "request": "Start from RAG Evaluation and follow its linked metrics and dataset notes; search for the definitions of repeated-trial success. A RAG assistant sometimes faithfully repeats an objectively false retrieved note, and sometimes contradicts correct retrieved evidence. Explain how to distinguish these failures and which metrics to inspect, and how to encode them as meaningful gold cases. Finally, assuming independent trials with a 0.5 success probability each, compute and interpret pass@3 versus pass^3. Does a good best-of-three score establish reliable success on every attempt?",
+      "ideal_answer": "Faithfulness asks whether the answer is supported by retrieved context; it does not establish that the context is true. Repeating an objectively false note can therefore be faithful but still objectively wrong, matching the RAG note’s hallucination criterion. Contradicting correct retrieved evidence is a generation/grounding failure with poor faithfulness; synthesis across several correct documents can also expose reasoning failures. Inspect context recall for missing relevant context, context precision for irrelevant retrievals, and answer relevance separately. Do not blame retrieval merely because an answer ignored evidence that was correctly retrieved. Add representative cases for both failure modes with expert-agreed ideal answers and/or clear acceptance criteria, including the correct factual expectation and the distinction between grounding and truth. Keep a consistent schema, version the additions, and record why each case exists; good data defines the failures the evaluation can detect. For independent trials with p = 0.5, pass@3 = 1 − (1 − p)³ = 0.875: at least one of three attempts succeeds. pass^3 = p³ = 0.125: all three attempts succeed. A high best-of-three score therefore does not establish consistent success on every attempt.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "The notes distinguish **grounding in retrieved context** from **objective truth**. Those can come apart:\n\n| Situation | What went wrong | Metrics to inspect |\n|---|---|---|\n| The assistant accurately repeats a retrieved note that is objectively false | The answer may be **faithful** to the context, but it is factually wrong. The RAG Evaluation note explicitly treats an objectively false claim as a hallucination even when the context itself is untrue. | **Faithfulness** may look good; inspect **hallucination/factual correctness** and whether the retrieved context was trustworthy. Use **context precision/recall** to diagnose retrieval quality, not to establish truth. |\n| The retrieved evidence is correct, but the assistant contradicts it | The answer is not grounded in the evidence: a **generation/faithfulness failure**, and potentially a factual error too. | **Faithfulness** should catch the contradiction; inspect **hallucination/factual correctness** as well. Context precision/recall help confirm that the correct evidence was actually retrieved. |\n\nSo don’t use faithfulness as a proxy for truth: a model can faithfully repeat false evidence. **Answer relevance** is also worth checking, but it won’t by itself distinguish these two failures.\n\nFor the gold dataset, encode the two cases separately and make the failure mode explicit, as the dataset note recommends:\n\n- **False retrieved note:** include the query and the false note as `expected_context`, but annotate its objective falsity. The answer criteria should require the assistant not to present it as established fact—for example, to flag the conflict or qualify the claim. Label the failure mode as *faithful repetition of false context*.\n- **Correct evidence contradicted:** include the query and correct evidence as `expected_context`; criteria should require an answer consistent with that evidence. Label the failure mode as *contradiction of retrieved evidence*.\n\nUse criteria or a rubric that separately judges **support from context** and **factual correctness**, rather than a single “good answer” label. That preserves the distinction the cases are meant to test.\n\nFor independent trials with per-trial success probability \\(p=0.5\\):\n\n- **pass@3** — success at least once in three trials: \\(1-(1-0.5)^3=0.875\\), or **87.5%**.\n- **pass^3** — success on all three trials: \\(0.5^3=0.125\\), or **12.5%**.\n\nA strong best-of-three (**pass@3**) score therefore does **not** establish reliable success on every attempt. It measures whether a correct answer can be found in the allotted tries; **pass^3** measures consistency across all of them.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "## Distinguish grounding from truth\n\n[[RAG Evaluation]] separates **faithfulness**—whether an answer is supported by retrieved context—from **objective correctness**, called hallucination in the note. They can disagree:\n\n- **Repeats a false retrieved note:** The answer may be faithful to the context but objectively wrong. Inspect **faithfulness** alongside **factual correctness/hallucination**, using an independently verified reference. Investigate the source’s accuracy and freshness; retrieval relevance alone cannot establish truth.\n- **Contradicts correct retrieved evidence:** The answer is unfaithful to the context and, in this example, objectively wrong. Inspect **faithfulness** and factual correctness, then investigate generation or reasoning—especially if the answer had to synthesize multiple documents.\n\nAlso inspect **context recall** to see whether the relevant evidence was retrieved, **context precision** to see how much retrieved material was relevant, and **answer relevance** to check whether the response addresses the question. A relevant source can still be false, and a relevant answer can still be wrong.\n\n## Encode meaningful gold cases\n\nFollowing [[Golden Evaluation Dataset]], give each case an ID, dataset version, reason added and explicit failure mode; record the query, conversation history if relevant, expected context, verified ground truth and answer criteria. For example:\n\n1. **False-source case:** Ask for a fictional product’s release date. Supply a retrieved note claiming *May 15*, while an independently verified authoritative record establishes *May 12*. Label the source as false and specify the expected behavior: if the authoritative evidence is available, give May 12 and identify the conflict; if only the false note is supplied, require appropriate source attribution or uncertainty rather than presenting May 15 as independently verified fact.\n2. **Contradiction case:** Use the same question with correct retrieved evidence stating *May 12*. Require the answer to give May 12 and not assert May 15. A May 15 answer fails both grounding and correctness.\n\nScore grounding and correctness as **separate rubric criteria**, with clear passing and failing examples. Include representative real cases, edge cases and adversarial cases, and version the dataset as failures are added. If using an LLM judge, calibrate it against expert labels. See [[Rubric Based Evaluation]] and [[LLM-as-a-Judge]].\n\n## Repeated trials\n\n[[AI Evaluation Metrics]] defines **pass@k** as at least one correct result in \\(k\\) trials and **pass^k** as correct results in *all* \\(k\\) trials. With independent trials and success probability \\(p=0.5\\):\n\n- **pass@3** = \\(1-(1-0.5)^3=0.875\\), or **87.5%**: at least one of three attempts succeeds.\n- **pass^3** = \\(0.5^3=0.125\\), or **12.5%**: all three attempts succeed.\n\n**No:** a good best-of-three score does not establish reliable success on every attempt. Here, at least one success is likely, but all three succeed only one time in eight. These calculations depend on the stated independence assumption.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "## Distinguish grounding from truth\n\n[[RAG Evaluation]] separates **faithfulness**—support in retrieved context—from **hallucination**, which this vault defines as objectively false claims, **even when the context itself is untrue**.\n\n| Observed behavior | Diagnosis | Metrics to inspect |\n|---|---|---|\n| Repeats an objectively false retrieved note as fact | **Faithful but false.** This points to a source-quality problem, not necessarily a grounding failure. | Faithfulness can be high while hallucination/false-claim rate is high. |\n| Contradicts correct retrieved evidence | **Generation/grounding failure.** If the error involves combining several documents, it may also be a reasoning failure. | Faithfulness is low; if the contradiction is objectively false, hallucination/false-claim rate is also high. |\n\nAlso inspect:\n- **Context recall:** Did retrieval include the evidence needed to answer?\n- **Context precision:** How much retrieved material was relevant?\n- **Answer relevance:** Did the response address the question?\n\n**Relevance is not truth:** a false note can be highly relevant, so strong retrieval precision and recall do not establish factual correctness. Conversely, if correct evidence was retrieved and ignored, blaming retrieval misses the generation failure.\n\n## Encode these as meaningful gold cases\n\nFollowing [[Golden Evaluation Dataset]], use representative, SME-labelled, versioned cases with an explicit `failure_mode` and an `added_reason`. Keep **expected evidence separate from actually supplied evidence**, and **objective truth separate from source support**.\n\nA useful case structure is:\n\n```yaml\nmetadata:\n  id: ...\n  dataset_version: ...\n  added_reason: ...\n  failure_mode: ...\ninput:\n  query: ...\n  conversation_history: ...\n  expected_context: ...       # evidence retrieval should find\n  retrieved_context: ...      # actual/fixed evidence shown to the model\nground_truth:\n  ideal_answer: ...\n  answer_criteria: ...\n  authoritative_reference: ...\n```\n\nThe extra context/reference fields make the two failure modes diagnosable rather than collapsing them into “bad answer.”\n\nInclude a paired set:\n\n1. **False-source propagation**\n   - Supply a note claiming “Australia’s capital is Sydney.”\n   - Independently establish Canberra as the factual reference.\n   - Grade source support and factual correctness separately: repeating Sydney is supported by the note but objectively wrong.\n   - Specify the intended behavior: for a factual-answer task, do not assert Sydney as fact; correct it when authoritative evidence is available, or flag the uncertainty/source limitation. For a “what does this note say?” task, an attributed report is different from endorsing the claim.\n\n2. **Correct-evidence contradiction**\n   - Supply correct evidence stating Canberra.\n   - Require an answer consistent with that evidence.\n   - An answer of Sydney fails both faithfulness and factual correctness.\n\nUse the specific, measurable criteria described in [[Rubric Based Evaluation]], rather than one overall “quality” score. If using an LLM judge, calibrate it against expert labels as described in [[LLM-as-a-Judge]]—especially on these cases where groundedness and truth diverge.\n\n## Repeated-trial success: pass@3 versus pass^3\n\n[[AI Evaluation Metrics]] defines:\n- **pass@k:** at least one correct answer in \\(k\\) trials.\n- **pass^k:** correct answers in all \\(k\\) trials.\n\nWith independent trials and per-trial success probability \\(p=0.5\\):\n\n\\[\n\\text{pass@3}=1-(1-p)^3=1-0.5^3=\\boxed{87.5\\%}\n\\]\n\n\\[\n\\text{pass}^{3}=p^3=0.5^3=\\boxed{12.5\\%}\n\\]\n\nSo three attempts give an **87.5% chance of finding at least one success**, but only a **12.5% chance that every attempt succeeds**.\n\n**No—a good best-of-three score does not establish reliable success on every attempt.** It measures the availability of a successful attempt, not consistency. Nor does it guarantee that a deployed system can recognize and select that successful answer without a reliable verifier.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "source-caveat-preservation",
+      "request": "Find the note containing the observation that \"the graph is not the goal\", and use it together with the notes pointing to Note taking is thinking and that note itself. Propose a workflow for processing a workshop into reusable knowledge: what should be archived, how should permanent notes be written and connected, what role should MOCs play, and why does this reduce mental load? Distinguish established findings in these notes from tentative ideas or personal reservations about a daily-review routine.",
+      "ideal_answer": "The observation is in 2 areas/soft skills/z MOC Personal Knowledge Management.md. It treats workshop notes as literature notes: process them into permanent notes after the workshop, then archive the original workshop material. Extract each worthwhile idea into a self-contained note, written in your own words, and connect it to existing related ideas and the context where you want to discover it again. MOCs are maps/indexes linking related notes or sub-MOCs, providing entry points rather than making the graph itself the objective. Knowledge work should accrete, an incoming link to Note taking is thinking, explains that isolated or transient outputs disappear or require mental effort to keep connected. Note taking is thinking describes reifying, organizing, and connecting ideas so they remain discoverable, evolve, and accumulate. The workflow externalizes those relationships and reduces cognitive load. Preserve the caveats: evergreen-note principles are marked as needing research, and the end-of-day review routine is a described creator’s approach with a personal reservation that it may not work well for the author, not an established mandatory practice.",
+      "candidates": [
+        {
+          "candidate_id": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "answer": "## A workshop-to-knowledge workflow\n\n1. **Capture the workshop as a source note.** Keep the workshop notes, slides, and other event-specific material together as a *literature note*. The PKM MOC explicitly says workshop notes should be processed after the workshop and then moved to the archive. Archiving preserves the source; it doesn’t mean treating the unprocessed notes as reusable knowledge.\n\n2. **Extract ideas into permanent notes.** Turn useful points into separate notes, each focused on one idea and written in your own words. Aim for each note to be understandable on its own. Link it back to the workshop source, and connect it to other notes where the idea would be useful or discoverable—not only to notes from the same event.\n\n3. **Use MOCs as navigation, not as the goal.** A MOC can act as an index or hub linking related notes and sub-MOCs. Add or expand one when it helps you find and synthesize material. The note containing “the graph is not the goal” cautions against optimizing the graph itself: links matter because they support idea synthesis, while the graph is only a visualization. Whether MOCs should also contain summaries is left as an open question in the PKM MOC.\n\n## Why this reduces mental load\n\n*Knowledge work should accrete* observes that ideas often disappear or remain unconnected, leaving us to keep them present and related in our heads—a burden that does not scale. *Note taking is thinking* argues that notes reify ideas: they make them discoverable, connectable, and able to evolve. Together, the notes suggest that a useful system carries some of the work of remembering and relating ideas, so thinking can build on what is already captured.\n\n## What’s established, and what’s tentative\n\nThe notes state as findings that workshop notes are literature notes to process into permanent notes, and that permanent notes should be self-contained ideas linked into a network. They also describe MOCs as indexes or hubs and emphasize that links support synthesis rather than graph-making for its own sake.\n\nA **daily review** is less settled. One workflow suggests capturing freely in daily notes and reviewing them at day’s end, but the note records a personal reservation: “don’t think this works well for me.” Treat that routine as an option to test, not a required part of the workflow. The firmer recommendation in these notes is to process the workshop material after the event.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-terra",
+          "model_id": "gpt-6.1-terra",
+          "answer": "The observation appears in [[2 areas/soft skills/z MOC Personal Knowledge Management|MOC Personal Knowledge Management]]: **the goal is idea synthesis through links, not the graph**. The graph is a visualization of that synthesis.\n\nUsing that note, [[2 areas/soft skills/Note taking is thinking|Note taking is thinking]], and its backlink [[2 areas/soft skills/Knowledge work should accrete|Knowledge work should accrete]], a workshop workflow could be:\n\n1. **Capture and archive the source.** Treat workshop notes as *literature notes*: retain the raw record for context and reference. Once the workshop is over, archive it, but first—or later, using a review tag—extract the useful knowledge. The PKM note records the problem with leaving long lecture notes unprocessed: they were never revisited and were disconnected from other knowledge.\n\n2. **Write permanent notes for reusable ideas.** For each worthwhile idea, write a self-contained note about one idea, rephrased in your own words. Organize it conceptually rather than solely by workshop or presenter, and link back to the archived source for context. This turns the workshop record into knowledge that can be found and used outside that event.\n\n3. **Connect ideas deliberately.** Link each permanent note to relevant existing ideas and add it where you would want to discover it again. Explain useful relationships rather than creating links merely to make a dense graph. Revisit and enrich notes as your understanding changes: the aim is a growing network, not a collection of isolated summaries.\n\n4. **Use MOCs as navigational hubs.** A map of content is an index linking related notes or sub-MOCs. Add workshop-derived ideas to appropriate topical MOCs, and let new hubs emerge when a theme becomes useful. The PKM note raises—but does not settle—the possibility that MOCs might also contain summaries, so treat that as an option rather than a rule.\n\n**Why this reduces mental load:** Unprocessed, disconnected ideas require you to keep both the ideas and their relationships in mind, which does not scale. Written notes make ideas discoverable; links and MOCs preserve relationships and routes back to them. That lets knowledge accumulate and evolve instead of repeatedly starting from transient notes. As *Note taking is thinking* puts it, the point is better thinking, not merely better note-taking.\n\n**Daily review is not an established requirement.** The PKM note describes one workflow that captures fleeting notes in a daily note and reviews them at day’s end, but its author explicitly doubts that the review would work well for them. A workshop-triggered or occasional review is a reasonable adaptation, not a finding from the notes. Similarly, the evergreen-note principles in the MOC are marked “needs to be researched,” so they should be treated as promising ideas rather than settled conclusions.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        },
+        {
+          "candidate_id": "gpt-6.1-sol",
+          "model_id": "gpt-6.1-sol",
+          "answer": "## Located notes\n\nThe observation is in [[2 areas/soft skills/z MOC Personal Knowledge Management|MOC Personal Knowledge Management]], under **Bryan Jenks**:\n\n> “Don't focus on the graphs, the graph is not the goal. The goal is idea synthesis via links. The graph just visualizes this.”\n\nThe note pointing to [[2 areas/soft skills/Note taking is thinking|Note taking is thinking]] is [[2 areas/soft skills/Knowledge work should accrete|Knowledge work should accrete]]. Together, these three notes suggest the following workflow.\n\n## Proposed workflow: workshop → reusable knowledge\n\n### 1. Capture the workshop as source material\nTreat the workshop record as a **literature/source note**, rather than expecting the raw transcript or chronological notes to become reusable knowledge automatically.\n\nThe PKM note records a concrete failure mode: long lecture notes contained knowledge that was never revisited and was connected to nothing.\n\n### 2. Extract useful ideas; archive the workshop record\nAfter the workshop, process the source note into permanent notes. **Archive the workshop notes when the workshop is finished**—an explicit finding in the PKM note. Archiving preserves the event record; it does not replace extracting its useful knowledge.\n\nFor material still awaiting extraction, a process tag such as “needs review” fits the practice recorded there. As a practical addition, link extracted notes back to the workshop source so their provenance remains accessible.\n\n### 3. Write permanent notes as independently usable ideas\nFor each worthwhile idea:\n\n- Give it **one idea per note**.\n- Make it **self-contained**, understandable without rereading the workshop.\n- Explain it **in your own words**, rather than merely copying the speaker.\n- Frame it around the concept or claim someone would want to reuse, rather than only the event where it appeared.\n\nThe first three are explicit Zettelkasten principles in the PKM note. Conceptual rather than event-based organization is also described there, but in the **Evergreen notes section marked “Needs to be researched”**—so treat that as a promising design direction, not a settled finding.\n\n### 4. Connect ideas where they will be useful\nLink each permanent note to relevant existing ideas. Ask: **“In what context would I want to encounter this again?”**\n\nThe purpose is not to maximize links or make an attractive graph. It is to expose useful relationships and enable synthesis. For example, an idea extracted from an interviewing workshop might belong alongside hiring guidance, feedback practices, or decision-making principles—not only beside other notes from that workshop.\n\nThis follows *Note taking is thinking*: the important work is organizing and connecting groups of notes so knowledge can emerge, accumulate, and evolve.\n\n### 5. Use MOCs as navigation hubs\nUse a relevant **map of content** to give the new notes an accessible entry point. The PKM note defines MOCs as indexes linking related notes or sub-MOCs.\n\nA sensible proposal is to extend an existing topic MOC first, and create a new one when a useful cluster needs navigation. Emergent MOCs are described in the surveyed workflows, rather than established as a universal rule.\n\nMOCs should serve retrieval and synthesis—not graph aesthetics. Whether they should also contain substantial summaries is explicitly an **open question** in the PKM note, so a summary-rich MOC is an option, not an agreed requirement.\n\n## Why this reduces mental load\n\n*Knowledge work should accrete* observes that keeping ideas present and connected **in your head does not scale**. Unprocessed workshop notes leave much of that burden on memory.\n\nPermanent notes externalize the ideas; links externalize their relationships; MOCs provide routes back into them. In the terms of *Note taking is thinking*, notes make knowledge discoverable, connectable, and capable of evolving. The result is not merely stored information, but knowledge that can accumulate and be put to use.\n\n## What is established, and what remains tentative?\n\n- **Recorded findings and core claims:** workshop notes need processing into permanent notes and then archiving; permanent notes should be self-contained, in your own words, and linked; connected knowledge reduces the burden of mentally retaining relationships.\n- **Surveyed or tentative approaches:** dense evergreen linking, organically emerging structure, particular folder schemes, and particular MOC conventions. The evergreen section explicitly needs further research.\n- **Open questions:** whether long synthesis notes should become summary-bearing MOCs, how to use tags, and how weekly or quarterly notes should relate to content notes.\n- **Personal reservation:** the end-of-day daily-note review comes from the Joshua Duffney workflow, with the annotation **“don't think this works well for me.”** It is not an endorsed requirement.\n\n**Recommendation:** schedule processing around the workshop or another sustainable trigger, rather than making daily review mandatory. Preserve the essential outcome—useful ideas extracted and connected—without adopting a routine the notes already question.",
+          "generation_error": null,
+          "human_ratings": {
+            "content": null,
+            "concision": null,
+            "usefulness": null
+          }
+        }
+      ]
+    }
+  ]
+}
