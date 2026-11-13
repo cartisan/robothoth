@@ -63,6 +63,40 @@ def test_load_rate_save_and_switch_dataset_clears_widgets(tmp_path: Path) -> Non
     assert app.session_state["judge_run"] is None
 
 
+def test_case_blocks_and_adjacent_rating_inputs(tmp_path: Path) -> None:
+    path = tmp_path / "dataset.json"
+    dataset = balanced_dataset()
+    dataset.questions[0].candidates[0].answer = "**Bold answer**\n\n- A list item"
+    save_dataset(dataset=dataset, path=path)
+    app = app_for(path=path)
+    human, calibration = app.tabs
+    assert [item.value for item in human.subheader] == ["one", "two"]
+    assert [item.value for item in calibration.subheader] == ["two"]
+    for tab in (human, calibration):
+        assert not tab.expander
+        rendered = [item.value for item in tab.markdown]
+        assert "**Question**" in rendered
+        assert "**Ideal answer**" in rendered
+        assert "Held out request" in rendered
+        assert "Held out ideal" in rendered
+        assert "**model-a**" in rendered
+    columns = human.get("column")
+    assert len(columns) == 12
+    for index, candidate in enumerate(
+        candidate for question in dataset.questions for candidate in question.candidates
+    ):
+        answer, ratings = columns[2 * index : 2 * index + 2]
+        assert not answer.number_input
+        assert [widget.label for widget in ratings.number_input] == [
+            "Content", "Concision", "Usefulness"
+        ]
+        assert not ratings.markdown
+        if candidate.answer is not None:
+            assert [item.value for item in answer.markdown] == [candidate.answer]
+        else:
+            assert "Generation failed: offline" in answer.error[0].value
+
+
 def test_old_results_restore_prompts_before_widgets_and_track_later_edits(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -221,7 +255,7 @@ def test_validation_is_explicit_repeatable_and_independent_of_test_run(
     app = app_for(path=path)
     initial = calibration_text(app=app)
     assert "Held out request" in initial  # Seed 42 puts case two in test.
-    assert "1. Question" not in initial
+    assert "Question" not in [item.value for item in app.tabs[1].markdown]
     assert "Answer A" not in initial
     assert not messages
     assert not app.button(key="validate_held_out").disabled
@@ -235,14 +269,14 @@ def test_validation_is_explicit_repeatable_and_independent_of_test_run(
     assert app.session_state["judge_run"] is None
     first = app.session_state["validation_run"]
     assert first.split_context.role == "validation"
-    assert "1. Question" in calibration_text(app=app)
+    assert "one" in [item.value for item in app.tabs[1].subheader]
     assert "Mean signed error" in calibration_text(app=app)
     assert any("offline" in error.value for error in app.tabs[1].error)
     app.number_input[0].set_value(5).run()
     assert "| Mean signed error | -1.0000 |" in calibration_text(app=app)
     app.text_area(key="prompt_content").set_value("Another edit").run()
     assert len(messages) == 6
-    assert "1. Question" in calibration_text(app=app)
+    assert "one" in [item.value for item in app.tabs[1].subheader]
     assert app.warning
     app.button(key="validate_held_out").click().run()
     assert len(messages) == 12
@@ -258,7 +292,7 @@ def test_validation_is_explicit_repeatable_and_independent_of_test_run(
     assert not app.session_state["validation_revealed"]
     assert app.session_state["validation_run"] is None
     assert app.session_state["judge_run"] is None
-    assert "1. Question" not in calibration_text(app=app)
+    assert "one" not in [item.value for item in app.tabs[1].subheader]
 
 
 def test_invalid_split_prevents_judging_and_blank_prompts_disable_validation(

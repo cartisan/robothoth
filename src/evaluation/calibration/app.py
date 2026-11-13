@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 from src.evaluation.calibration.dataset import (
     SPLIT_SEED,
     CalibrationDataset,
+    Candidate,
     HumanRatings,
+    Question,
     load_dataset,
     save_dataset,
 )
@@ -50,33 +52,50 @@ def clear_dataset_state() -> None:
     st.session_state["validation_revealed"] = False
 
 
+def display_question(question: Question) -> None:
+    """Display a case ID and visible Markdown blocks for its request and reference."""
+    st.subheader(question.case_id)
+    st.markdown("**Question**")
+    with st.container(border=True):
+        st.markdown(question.request)
+    st.markdown("**Ideal answer**")
+    with st.container(border=True):
+        st.markdown(question.ideal_answer)
+
+
+def display_answer(candidate: Candidate) -> None:
+    """Display a bordered Markdown answer or its recorded generation failure."""
+    with st.container(border=True):
+        if candidate.answer is not None:
+            st.markdown(candidate.answer)
+        elif candidate.generation_error is not None:
+            st.error(f"Generation failed: {candidate.generation_error.message}")
+
+
 def human_ratings_tab(dataset: CalibrationDataset, path: Path) -> None:
     """Display ordered candidates and nullable ratings; save to the loaded path."""
     for qi, question in enumerate(dataset.questions):
-        st.subheader(f"{qi + 1}. {question.request}")
-        st.caption(question.case_id)
-        with st.expander("Ideal answer"):
-            st.markdown(question.ideal_answer)
+        display_question(question=question)
         for ci, candidate in enumerate(question.candidates):
             st.markdown(f"**{dataset.generation.models[candidate.model_id].model}**")
-            if candidate.answer is not None:
-                st.markdown(candidate.answer)
-            elif candidate.generation_error is not None:
-                st.error(f"Generation failed: {candidate.generation_error.message}")
+            answer_column, ratings_column = st.columns(spec=[3, 1])
+            with answer_column:
+                display_answer(candidate=candidate)
             ratings = {}
-            for stage, field in RATING_FIELDS.items():
-                key = f"rating_{qi}_{ci}_{field}"
-                if key not in st.session_state:
-                    st.session_state[key] = getattr(candidate.human_ratings, field)
-                value = st.number_input(
-                    label=LABELS[stage],
-                    min_value=1,
-                    max_value=5,
-                    step=1,
-                    value=None,
-                    key=key,
-                )
-                ratings[field] = None if value is None else int(value)
+            with ratings_column:
+                for stage, field in RATING_FIELDS.items():
+                    key = f"rating_{qi}_{ci}_{field}"
+                    if key not in st.session_state:
+                        st.session_state[key] = getattr(candidate.human_ratings, field)
+                    value = st.number_input(
+                        label=LABELS[stage],
+                        min_value=1,
+                        max_value=5,
+                        step=1,
+                        value=None,
+                        key=key,
+                    )
+                    ratings[field] = None if value is None else int(value)
             candidate.human_ratings = HumanRatings(**ratings)
             st.divider()
     if st.button("Save dataset", key="save_dataset"):
@@ -200,16 +219,11 @@ def display_cases(dataset: CalibrationDataset, run: JudgeRun | None) -> None:
         if run is not None
         else {}
     )
-    for qi, question in enumerate(dataset.questions):
-        st.subheader(f"{qi + 1}. {question.request}")
-        with st.expander("Ideal answer"):
-            st.markdown(question.ideal_answer)
+    for question in dataset.questions:
+        display_question(question=question)
         for candidate in question.candidates:
             st.markdown(f"**{dataset.generation.models[candidate.model_id].model}**")
-            if candidate.answer is not None:
-                st.markdown(candidate.answer)
-            elif candidate.generation_error is not None:
-                st.error(f"Generation failed: {candidate.generation_error.message}")
+            display_answer(candidate=candidate)
             st.markdown(
                 "Human scores — "
                 + ", ".join(
