@@ -21,7 +21,7 @@ class CallReference:
 class ToolCheckResult:
     """Retain one requirement's result, explanation, and relevant attempts."""
 
-    criterion_id: str
+    check_id: str
     passed: bool
     explanation: str
     calls: tuple[CallReference, ...]
@@ -75,7 +75,7 @@ def evaluate_tool_checks(
         passed = any(_successful(call) for _, call in matching)
         results.append(
             ToolCheckResult(
-                criterion_id=f"required_tools[{index}]",
+                check_id=f"required_tools[{index}]",
                 passed=passed,
                 explanation=(
                     f"{'Found' if passed else 'Missing'} successful {name} call."
@@ -90,7 +90,7 @@ def evaluate_tool_checks(
         passed = any(_successful(call) for _, call in matching)
         results.append(
             ToolCheckResult(
-                criterion_id=f"required_note_reads[{index}]",
+                check_id=f"required_note_reads[{index}]",
                 passed=passed,
                 explanation=(
                     f"{'Found' if passed else 'Missing'} successful read of {expected}."
@@ -102,7 +102,7 @@ def evaluate_tool_checks(
         matching_refs = tuple(ref for ref, call in attempts if call.name == name)
         results.append(
             ToolCheckResult(
-                criterion_id=f"forbidden_tools[{index}]",
+                check_id=f"forbidden_tools[{index}]",
                 passed=not matching_refs,
                 explanation=(
                     f"{name} "
@@ -117,7 +117,7 @@ def evaluate_tool_checks(
         )
         results.append(
             ToolCheckResult(
-                criterion_id="allowed_tools",
+                check_id="allowed_tools",
                 passed=not violations,
                 explanation=(
                     "Attempts outside allowlist."

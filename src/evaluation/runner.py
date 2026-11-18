@@ -299,14 +299,14 @@ def run_evaluation(
                         result["status"] = "passed" if passed else "failed"
                 for score in result["scores"]:
                     repeat_span.score(
-                        name=f"semantic.{score['criterion_id']}",
+                        name=f"semantic.{score['rubric']}",
                         value=score["score"],
                         data_type="NUMERIC",
                         comment=score["explanation"],
                     )
                 for check in result["tool_checks"]:
                     repeat_span.score(
-                        name=f"tool.{check['criterion_id']}",
+                        name=f"tool.{check['check_id']}",
                         value=int(check["passed"]),
                         data_type="BOOLEAN",
                         comment=check["explanation"],

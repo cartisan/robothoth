@@ -32,31 +32,17 @@ def _nonblank(value: str) -> str:
 
 
 class AnswerCriteria(BaseModel):
-    """Reference answer and/or required criteria for evaluating a response."""
+    """Required reference answer for evaluating response content."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    ideal_answer: str | None = None
-    additional_criteria: list[str] | None = None
+    ideal_answer: str
 
     @field_validator("ideal_answer")
     @classmethod
-    def validate_ideal_answer(cls, value: str | None) -> str | None:
-        """Accept an absent answer or a nonblank reference answer."""
-        return None if value is None else _nonblank(value)
-
-    @field_validator("additional_criteria")
-    @classmethod
-    def validate_criteria(cls, value: list[str] | None) -> list[str] | None:
-        """Accept absent criteria or nonblank criteria, including an empty list."""
-        return None if value is None else [_nonblank(item) for item in value]
-
-    @model_validator(mode="after")
-    def require_criterion(self) -> "AnswerCriteria":
-        """Require a usable answer or at least one criterion."""
-        if self.ideal_answer is None and not self.additional_criteria:
-            raise ValueError("ideal_answer or nonempty additional_criteria is required")
-        return self
+    def validate_ideal_answer(cls, value: str) -> str:
+        """Require a nonblank reference answer without changing its text."""
+        return _nonblank(value)
 
 
 class ToolChecks(BaseModel):

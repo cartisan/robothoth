@@ -59,6 +59,16 @@ class JudgeConfig(ModelConfig):
     structured_output_kwargs: dict[str, Any] = Field(default_factory=dict)
 
 
+def default_judge_config() -> JudgeConfig:
+    """Return fresh shared production judge settings with strict native output."""
+    return JudgeConfig(
+        provider="openai",
+        model="gpt-6.1-terra",
+        settings={"reasoning_effort": "high", "use_responses_api": True},
+        structured_output_kwargs={"method": "json_schema", "strict": True},
+    )
+
+
 class EvaluationConfig(BaseModel):
     """Configure candidate and judge separately, with usable provider defaults."""
 
@@ -71,10 +81,4 @@ class EvaluationConfig(BaseModel):
             tool_binding_kwargs={"strict": True},
         )
     )
-    judge: JudgeConfig = Field(
-        default_factory=lambda: JudgeConfig(
-            provider="openai",
-            model="gpt-6.1-sol",
-            settings={"reasoning_effort": "medium", "use_responses_api": True},
-        )
-    )
+    judge: JudgeConfig = Field(default_factory=default_judge_config)

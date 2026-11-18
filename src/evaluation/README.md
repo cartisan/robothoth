@@ -38,14 +38,20 @@ in reports.
 `SemanticJudge(model=model).grade(request=request, final_answer=final_answer,
 answer_criteria=answer_criteria)` also grades saved answers. Import `SemanticJudge` from
 `src.evaluation.judge` and `AnswerCriteria` from `src.gold_dataset.validate`.
-The result exposes `scores` and `judge_calls`. Each score uses `criterion_id`.
-Stages are mutable and reused across answers; calls on one judge must be sequential.
+The result exposes `scores` and `judge_calls`. Each score uses `rubric`.
+`grade_stage(prompt, payload)` grades one rubric using an explicit nonblank
+prompt and a `GradingPayload` from `src.evaluation.judge`. The payload contains
+`request`, `final_answer`, and `rubric` (`content`, `concision`, or
+`task_usefulness`). Content requires a nonblank `ideal_answer` reference;
+other rubrics reject references. Each response must contain exactly one score
+whose `rubric` matches the payload's `rubric`. Both methods share the
+production schema, validation and error evidence.
 
 ## Model configuration
 
-The default candidate is OpenAI `gpt-6-luna`; the judge is OpenAI `gpt-6.1-sol`.
-Both use medium reasoning and the Responses API. The judge defaults to strict
-native JSON-schema output.
+The default candidate is OpenAI `gpt-6-luna` with low reasoning; the judge is
+OpenAI `gpt-6.1-terra` with high reasoning. Both use the Responses API. The judge
+defaults to strict native JSON-schema output.
 
 An optional config file selects each model independently:
 
@@ -75,25 +81,25 @@ conversation-continuation IDs are rejected.
 
 Each grade makes three sequential calls:
 
-| Stage | Supplied evidence | Criterion IDs |
+| Stage | Supplied evidence | Rubric |
 | --- | --- | --- |
-| Content | Request, final answer, ideal answer, case-specific criteria | `ideal_answer`, applicable `additional_criteria[i]` |
-| Concision | Request and final answer only | `quality.concision` |
-| Task usefulness | Request and final answer only | `quality.task_usefulness` |
+| Content | Request, final answer, ideal answer | `content` |
+| Concision | Request and final answer only | `concision` |
+| Task usefulness | Request and final answer only | `task_usefulness` |
 
 Each call starts with a fresh system/user message pair. Quality calls see only
 their own rubric and the request and answer, without reference material or other
 stages' results. Judges have no trace or vault access; tool requirements are
 checked separately and deterministically.
 
-Content scoring requires essential meaning and all case-specific criteria while
+Content scoring requires agreement on essential meaning with the ideal answer while
 accepting paraphrases. Concision rewards proportional detail without padding;
 necessary explanations can earn full marks. Task usefulness measures an
 appropriately scoped, formatted, and usable deliverable.
 
 Scores are integers: 1 fails, 2 has major gaps, 3 partially meets the requirement,
 4 meets it with minor issues, and 5 fully meets it. Missing or contradicted
-essential content scores at most 3. Each criterion needs one score and a short
+essential content scores at most 3. Each rubric needs one score and a short
 explanation; missing, duplicate, unknown, or malformed scores invalidate grading.
 
 | Status | Meaning |
@@ -121,7 +127,10 @@ repeat. Files are replaced atomically; JSON is authoritative.
 Report format `4` includes answers, scores, explanations, tool evidence, traces,
 credential-free configuration, and versioned prompt snapshots. `judge_prompt`
 stores the content prompt; `quality_judge_prompts` stores the two quality prompts.
-Scores and tool-check results identify each requirement with `criterion_id`.
+Semantic scores identify their rubric with `rubric`; tool-check results identify
+requirements with `check_id`.
+Semantic telemetry labels are `semantic.content`, `semantic.concision`, and
+`semantic.task_usefulness`.
 Each repeat's `judge_calls` records `{stage, raw_response}` in call order, using
 `null` when an attempted call produced no response.
 
@@ -134,3 +143,8 @@ Markdown.
 
 Dataset contents are not embedded in reports. Use the corresponding Git revision
 when regrading historical answers against their original criteria.
+
+## Calibration
+
+See [LLM judge calibration](calibration/README.md) for answer generation, nullable
+human ratings, editable judge prompts, checkpointed results and Spearman correlation.

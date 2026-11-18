@@ -18,8 +18,8 @@ from src.evaluation.judge import (
     CONCISION_PROMPT,
     CONTENT_PROMPT,
     TASK_USEFULNESS_PROMPT,
-    CriterionScore,
     JudgeCall,
+    RubricScore,
     SemanticGrade,
     SemanticJudge,
 )
@@ -38,16 +38,16 @@ def judge_with(*responses: Any) -> SemanticJudge:
         if isinstance(response, Exception):
             scripted.append(response)
             continue
-        for key in ("ideal_answer", "quality.concision", "quality.task_usefulness"):
+        for key in ("content", "concision", "task_usefulness"):
             scripted.append(
                 structured_response(
                     raw=raw,
                     scores=[
                         {
-                            "criterion_id": key,
-                            "score": response if key == "ideal_answer" else 5,
+                            "rubric": key,
+                            "score": response if key == "content" else 5,
                             "explanation": "Meaning checked"
-                            if key == "ideal_answer"
+                            if key == "content"
                             else "Useful and concise",
                         }
                     ],
@@ -132,8 +132,8 @@ def test_all_cases_repeats_thresholds_and_version_metadata(
     assert run.exit_code == 1
     summary = (run.run_directory / "summary.md").read_text()
     assert "3 / 4" in summary and "75.0%" in summary and "repeat 2: failed" in summary
-    assert "| ideal_answer | 3 / 5 | failed | Meaning checked |" in summary
-    assert "| ideal_answer | 4 / 5 | passed | Meaning checked |" in summary
+    assert "| content | 3 / 5 | failed | Meaning checked |" in summary
+    assert "| content | 4 / 5 | passed | Meaning checked |" in summary
 
 
 def test_errors_continue_and_exclude_error_denominators(tmp_path: Path) -> None:
@@ -199,7 +199,7 @@ def test_tool_failures_still_grade_and_partial_trace_retained(tmp_path: Path) ->
     assert (
         "| required_tools[0] | failed | Missing successful list_notes call."
     ) in summary
-    assert "| ideal_answer | 5 / 5 | passed | Meaning checked |" in summary
+    assert "| content | 5 / 5 | passed | Meaning checked |" in summary
 
     candidate = ScriptedChatModel(
         responses=[
@@ -521,7 +521,6 @@ def test_every_semantic_score_and_tool_requirement_must_pass(tmp_path: Path) -> 
             entry(
                 answer_criteria={
                     "ideal_answer": "A",
-                    "additional_criteria": ["Concise"],
                 },
             )
         ],
@@ -529,10 +528,8 @@ def test_every_semantic_score_and_tool_requirement_must_pass(tmp_path: Path) -> 
     judge = judge_with(4)
     grade = SemanticGrade(
         (
-            CriterionScore(criterion_id="ideal_answer", score=5, explanation="Agrees"),
-            CriterionScore(
-                criterion_id="additional_criteria[0]", score=3, explanation="Long"
-            ),
+            RubricScore(rubric="content", score=5, explanation="Agrees"),
+            RubricScore(rubric="concision", score=3, explanation="Long"),
         ),
         (JudgeCall(stage="content", raw_response=AIMessage(content="raw")),),
     )
@@ -671,18 +668,18 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
             ),
             scores=[
                 {
-                    "criterion_id": key,
+                    "rubric": key,
                     "score": score,
                     "explanation": "Meaning checked",
                 }
             ],
         )
         for key, tokens, score in [
-            ("ideal_answer", 10, 5),
-            ("quality.concision", 5, 5),
-            ("quality.task_usefulness", 10, 5),
-            ("ideal_answer", 15, 5),
-            ("quality.concision", 20, "invalid"),
+            ("content", 10, 5),
+            ("concision", 5, 5),
+            ("task_usefulness", 10, 5),
+            ("content", 15, 5),
+            ("concision", 20, "invalid"),
         ]
     ]
     monkeypatch.setattr(
@@ -724,7 +721,7 @@ def test_suite_and_repeat_costs_include_judge_errors_and_wall_time(
 
 
 @pytest.mark.parametrize(
-    argnames="quality_id", argvalues=["quality.concision", "quality.task_usefulness"]
+    argnames="quality_id", argvalues=["concision", "task_usefulness"]
 )
 @pytest.mark.parametrize(argnames="value", argvalues=[3, 4])
 def test_quality_threshold_controls_repeat_status_and_exit_code(
@@ -742,13 +739,13 @@ def test_quality_threshold_controls_repeat_status_and_exit_code(
             raw=AIMessage(content=key),
             scores=[
                 {
-                    "criterion_id": key,
+                    "rubric": key,
                     "score": value if key == quality_id else 5,
                     "explanation": "Independently assessed",
                 }
             ],
         )
-        for key in ("ideal_answer", "quality.concision", "quality.task_usefulness")
+        for key in ("content", "concision", "task_usefulness")
     ]
     run = run_evaluation(
         candidate_model=ScriptedChatModel(responses=[AIMessage(content="Answer")]),
